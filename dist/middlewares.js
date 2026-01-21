@@ -1,6 +1,9 @@
-import { status } from "./helpers.js";
-import { Cache } from "@bepalo/cache";
-import { Time } from "@bepalo/time";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.authJWT = exports.authAPIKey = exports.authBasic = exports.cors = exports.limitRate = void 0;
+const helpers_js_1 = require("./helpers.js");
+const cache_1 = require("@bepalo/cache");
+const time_1 = require("@bepalo/time");
 /**
  * Creates a rate limiting middleware using token bucket algorithm.
  * Supports both fixed interval refill and continuous rate-based refill.
@@ -38,18 +41,18 @@ import { Time } from "@bepalo/time";
  *
  * @throws {Error} If neither refillInterval nor refillRate is provided
  */
-export const limitRate = (config) => {
+const limitRate = (config) => {
     const { key, refillInterval, refillRate, maxTokens, refillTimeSecondsDenominator = 1000, now = () => Date.now(), cacheConfig = {
         now: () => Date.now(),
         // defaultMaxAgse: Time.for(10).seconds._ms,
-        defaultMaxAge: Time.for(1).hour._ms,
-        cleanupInterval: Time.every(10).minutes._ms,
+        defaultMaxAge: time_1.Time.for(1).hour._ms,
+        cleanupInterval: time_1.Time.every(10).minutes._ms,
         onGetMiss: (cache, key, reason) => {
             cache.set(key, { tokens: maxTokens, lastRefill: now() });
             return true;
         },
     }, setXRateLimitHeaders = false, } = config;
-    let rateLimits = new Cache(cacheConfig);
+    let rateLimits = new cache_1.Cache(cacheConfig);
     if (refillInterval) {
         return (req, ctx) => {
             var _a;
@@ -70,7 +73,7 @@ export const limitRate = (config) => {
             }
             if (entry.tokens <= 0) {
                 ctx.headers.set("Retry-After", Math.ceil((refillInterval - timeElapsed) / refillTimeSecondsDenominator).toFixed());
-                return status(429);
+                return (0, helpers_js_1.status)(429);
             }
             else {
                 entry.tokens--;
@@ -93,7 +96,7 @@ export const limitRate = (config) => {
             entry.lastRefill = now();
             if (entry.tokens <= 0) {
                 ctx.headers.set("Retry-After", Math.ceil(1 / refillRate).toFixed());
-                return status(429);
+                return (0, helpers_js_1.status)(429);
             }
             else {
                 entry.tokens--;
@@ -106,6 +109,7 @@ export const limitRate = (config) => {
     }
     throw new Error("LIMIT-RATE: `refillInterval` or `refillRate` or both should be set");
 };
+exports.limitRate = limitRate;
 /**
  * Creates a CORS (Cross-Origin Resource Sharing) middleware.
  * Supports preflight requests and configurable CORS headers.
@@ -136,7 +140,7 @@ export const limitRate = (config) => {
  *
  * @throws {Error} If credentials is true with wildcard origin ("*")
  */
-export const cors = (config) => {
+const cors = (config) => {
     const { origins = "*", methods = ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"], allowedHeaders = ["Content-Type", "Authorization"], exposedHeaders, credentials = false, maxAge = 86400, varyOrigin = false, } = config !== null && config !== void 0 ? config : {};
     const globOrigin = origins === "*" ? "*" : null;
     const originsSet = new Set(typeof origins !== "string" ? origins : origins !== "*" ? [] : [origins]);
@@ -179,10 +183,11 @@ export const cors = (config) => {
             if (maxAge) {
                 ctx.headers.set("Access-Control-Max-Age", maxAge.toString());
             }
-            return status(204, null);
+            return (0, helpers_js_1.status)(204, null);
         }
     };
 };
+exports.cors = cors;
 /**
  * Creates a Basic Authentication middleware.
  * Supports RFC 7617 Basic Authentication scheme.
@@ -209,34 +214,35 @@ export const cors = (config) => {
  *   ctxProp: "user" // Store in ctx.user instead of ctx.basicAuth
  * });
  */
-export const authBasic = ({ credentials, type = "raw", separator = ":", realm = "Protected", ctxProp = "basicAuth", }) => {
+const authBasic = ({ credentials, type = "raw", separator = ":", realm = "Protected", ctxProp = "basicAuth", }) => {
     return (req, ctx) => {
         const authorization = req.headers.get("authorization");
         ctx.headers.set("WWW-Authenticate", `Basic realm="${realm}", charset="UTF-8"`);
         if (!authorization)
-            return status(401);
+            return (0, helpers_js_1.status)(401);
         const [scheme, creds] = authorization.split(" ", 2);
         if (scheme.toLowerCase() !== "basic" || !creds)
-            return status(401);
+            return (0, helpers_js_1.status)(401);
         let xcreds;
         try {
             xcreds = type === "base64" ? atob(creds) : creds;
         }
         catch (_a) {
-            return status(401);
+            return (0, helpers_js_1.status)(401);
         }
         const [username, password] = xcreds.split(separator, 2);
         if (!username || !password)
-            return status(401);
+            return (0, helpers_js_1.status)(401);
         const user = credentials.get(username);
         if (!user || password !== user.pass)
-            return status(401);
+            return (0, helpers_js_1.status)(401);
         ctx[ctxProp] = {
             username,
             role: user.role,
         };
     };
 };
+exports.authBasic = authBasic;
 /**
  * Creates an API Key Authentication middleware.
  * Validates API keys from X-API-Key header.
@@ -269,16 +275,17 @@ export const authBasic = ({ credentials, type = "raw", separator = ":", realm = 
  *   }
  * });
  */
-export const authAPIKey = ({ verify, ctxProp = "apiKeyAuth", }) => {
+const authAPIKey = ({ verify, ctxProp = "apiKeyAuth", }) => {
     return (req, ctx) => {
         const apiKey = req.headers.get("X-API-Key");
         if (!apiKey || !verify(apiKey))
-            return status(401);
+            return (0, helpers_js_1.status)(401);
         ctx[ctxProp] = {
             apiKey,
         };
     };
 };
+exports.authAPIKey = authAPIKey;
 /**
  * Creates a JWT (JSON Web Token) Authentication middleware.
  * Validates Bearer tokens from Authorization header.
@@ -327,20 +334,20 @@ export const authAPIKey = ({ verify, ctxProp = "apiKeyAuth", }) => {
  *   }
  * });
  */
-export const authJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", }) => {
+const authJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", }) => {
     return (req, ctx) => {
         var _a;
         const authorization = req.headers.get("authorization");
         if (!authorization)
-            return status(401);
+            return (0, helpers_js_1.status)(401);
         const [scheme, token] = authorization.split(" ", 2);
         if (scheme.toLowerCase() !== "bearer" || !token)
-            return status(401);
+            return (0, helpers_js_1.status)(401);
         const result = jwt.verifySync(token, verifyOptions);
         if (!result.payload)
-            return status(401, (_a = result.error) === null || _a === void 0 ? void 0 : _a.message);
+            return (0, helpers_js_1.status)(401, (_a = result.error) === null || _a === void 0 ? void 0 : _a.message);
         if (validate && !validate(result.payload))
-            return status(401);
+            return (0, helpers_js_1.status)(401);
         ctx[ctxProp] = {
             jwt,
             token,
@@ -348,4 +355,5 @@ export const authJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", }) 
         };
     };
 };
+exports.authJWT = authJWT;
 //# sourceMappingURL=middlewares.js.map

@@ -1,3 +1,4 @@
+"use strict";
 /**
  * @file A fast radix-trie based router for JavaScript runtimes.
  * @module @bepalo/router
@@ -25,13 +26,15 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
 var _Router_trees, _Router_enable, _Router_defaultHeaders, _Router_defaultCatcher, _Router_defaultFallback, _Router_setters;
-import { Tree } from "./tree.js";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Router = exports.isValidHttpMethod = void 0;
+const tree_js_1 = require("./tree.js");
 /**
  * Checks if a string is a valid HTTP method.
  * @param {string} method - The method string to validate
  * @returns {boolean} True if the method is valid, false otherwise
  */
-export const isValidHttpMethod = (method) => {
+const isValidHttpMethod = (method) => {
     switch (method) {
         case "HEAD":
         case "OPTIONS":
@@ -45,6 +48,7 @@ export const isValidHttpMethod = (method) => {
             return false;
     }
 };
+exports.isValidHttpMethod = isValidHttpMethod;
 /**
  * Initializes method trees for all HTTP methods.
  * @returns {Record<HttpMethod, Tree<RouteNode<Context>>>} Trees for each HTTP method
@@ -52,13 +56,13 @@ export const isValidHttpMethod = (method) => {
  */
 function initMethodTrees() {
     return {
-        HEAD: new Tree(),
-        OPTIONS: new Tree(),
-        GET: new Tree(),
-        POST: new Tree(),
-        PUT: new Tree(),
-        PATCH: new Tree(),
-        DELETE: new Tree(),
+        HEAD: new tree_js_1.Tree(),
+        OPTIONS: new tree_js_1.Tree(),
+        GET: new tree_js_1.Tree(),
+        POST: new tree_js_1.Tree(),
+        PUT: new tree_js_1.Tree(),
+        PATCH: new tree_js_1.Tree(),
+        DELETE: new tree_js_1.Tree(),
     };
 }
 /** @constant {Array} emptyArray - Empty array constant for optimization */
@@ -92,7 +96,7 @@ const emptyArray = [];
  * const response = await router.respond(new Request("http://localhost/"));
  *
  */
-export class Router {
+class Router {
     /**
      * Gets the routing trees for all handler types.
      * @returns {Record<HandlerType, Record<HttpMethod, Tree<RouteNode<Context>>>>}
@@ -385,7 +389,7 @@ export class Router {
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b, _c, _d;
             const method = req.method;
-            if (!isValidHttpMethod(method)) {
+            if (!(0, exports.isValidHttpMethod)(method)) {
                 return new Response("Method Not Allowed", {
                     status: 405,
                     statusText: "Method Not Allowed",
@@ -582,6 +586,7 @@ export class Router {
         });
     }
 }
+exports.Router = Router;
 _Router_trees = new WeakMap(), _Router_enable = new WeakMap(), _Router_defaultHeaders = new WeakMap(), _Router_defaultCatcher = new WeakMap(), _Router_defaultFallback = new WeakMap(), _Router_setters = new WeakMap();
 /**
  * Static property containing all HTTP methods with wildcard paths.
@@ -650,5 +655,5 @@ function splitUrl(urls) {
     }
     return splitUrls;
 }
-export default Router;
+exports.default = Router;
 //# sourceMappingURL=router.js.map

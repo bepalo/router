@@ -1,6 +1,6 @@
 {
   "name": "@bepalo/router",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A fast and feature-rich router for JavaScript runtimes.",
   "author": "Natnael Eshetu",
   "license": "MIT",
@@ -42,13 +42,12 @@
     "router",
     "rest",
     "http",
-    "https"
+    "https",
+    "middleware"
   ],
   "dependencies": {
     "@bepalo/cache": "^1.0.3",
     "@bepalo/jwt": "^2.0.9",
     "@bepalo/time": "^1.2.11"
-  },
-  "type": "module",
-  "private": true
+  }
 }

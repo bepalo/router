@@ -1,3 +1,4 @@
+"use strict";
 /**
  * @file A minimal and efficient implementation of a doubly-linked list with node-level access.
  * @author Natnael Eshetu
@@ -16,11 +17,13 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
 var _List_first, _List_last, _List_size;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.List = exports.ListNode = void 0;
 /**
  * A node in a doubly linked list.
  * @template T
  */
-export class ListNode {
+class ListNode {
     /**
      * Creates a new ListNode.
      * @param {T} value - Value held by this node.
@@ -33,7 +36,8 @@ export class ListNode {
         this.next = next;
     }
 }
-export class List {
+exports.ListNode = ListNode;
+class List {
     /**
      * Creates a new List instance. If an iterable is provided, pushes all values into the list.
      * @param {Iterable<T>} [iterable] - Optional iterable of values to initialize the list.
@@ -474,5 +478,6 @@ export class List {
         return node;
     }
 }
-export default List;
+exports.List = List;
+exports.default = List;
 //# sourceMappingURL=list.js.map
