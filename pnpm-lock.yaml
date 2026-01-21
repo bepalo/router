@@ -11,6 +11,12 @@ importers:
       '@bepalo/cache':
         specifier: ^1.0.3
         version: 1.0.3
+      '@bepalo/jwt':
+        specifier: ^2.0.9
+        version: 2.0.9
+      '@bepalo/time':
+        specifier: ^1.2.11
+        version: 1.2.11
     devDependencies:
       '@types/bun':
         specifier: latest
@@ -44,6 +50,12 @@ packages:
 
   '@bepalo/cache@1.0.3':
     resolution: {integrity: sha512-WFB+79RLm50kq+yodQ8ftQXLIxxG1NTXz2OFlfD9uklhm2eodtijk78rBFiPtDQFovyCG6/LuPJu7wrvbV4xWQ==}
+
+  '@bepalo/jwt@2.0.9':
+    resolution: {integrity: sha512-DPISx1Z8pGxL+MhYWFi3tgoER6MO+0R1N5NRSTt8Evl94t7ING/GNFriRoBbC1o8yGISsAfWiVMPvF1cVjS7tg==}
+
+  '@bepalo/time@1.2.11':
+    resolution: {integrity: sha512-A6a4gh3vScUK0AyUS9mTdRHgEJvU7jElLgI8URFqlOQvH48ZTesIKy2rJ5cd3j5Cp72jzvMZQhGy9EaqH7OM5g==}
 
   '@esbuild/aix-ppc64@0.25.6':
     resolution: {integrity: sha512-ShbM/3XxwuxjFiuVBHA+d3j5dyac0aEVVq1oluIDf71hUw0aRF59dV/efUsIwFnR6m8JNM2FjZOzmaZ8yG61kw==}
@@ -876,6 +888,12 @@ snapshots:
   '@actions/io@1.1.3': {}
 
   '@bepalo/cache@1.0.3': {}
+
+  '@bepalo/jwt@2.0.9':
+    dependencies:
+      '@bepalo/time': 1.2.11
+
+  '@bepalo/time@1.2.11': {}
 
   '@esbuild/aix-ppc64@0.25.6':
     optional: true

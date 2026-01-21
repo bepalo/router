@@ -454,7 +454,7 @@ router.filter("*", [
 ]);
 
 // Rate limiting for API
-router.filter("GET /api/*", [
+router.filter("GET /api/.**", [
   limitRate({
     key: (req, ctx) => ctx.address.address || "unknown",
     maxTokens: 100,
