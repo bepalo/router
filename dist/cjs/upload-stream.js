@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.parseUploadStreaming = void 0;
-const helpers_js_1 = require("./helpers.js");
+const helpers_1 = require("./helpers");
 /**
  * Creates a middleware function for streaming multipart/form-data upload parsing.
  * This function processes uploads in chunks as they arrive, allowing for handling
@@ -55,12 +55,12 @@ const parseUploadStreaming = (options) => {
         const contentType = req.headers.get("content-type");
         // Check if it's multipart/form-data
         if (!(contentType === null || contentType === void 0 ? void 0 : contentType.startsWith("multipart/form-data"))) {
-            return (0, helpers_js_1.status)(415, "Expected multipart/form-data");
+            return (0, helpers_1.status)(415, "Expected multipart/form-data");
         }
         // Get boundary from content-type
         const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
         if (!boundaryMatch) {
-            return (0, helpers_js_1.status)(400, "Missing boundary in Content-Type");
+            return (0, helpers_1.status)(400, "Missing boundary in Content-Type");
         }
         const boundary = boundaryMatch[1] || boundaryMatch[2];
         // Generate upload ID
@@ -331,15 +331,15 @@ const parseUploadStreaming = (options) => {
             }
             console.error("Upload parsing error:", error);
             if (error.message.includes("exceeds maximum")) {
-                return (0, helpers_js_1.status)(413, error.message);
+                return (0, helpers_1.status)(413, error.message);
             }
             if (error.message.includes("not allowed")) {
-                return (0, helpers_js_1.status)(415, error.message);
+                return (0, helpers_1.status)(415, error.message);
             }
             if (error.message.includes("exceeded")) {
-                return (0, helpers_js_1.status)(400, error.message);
+                return (0, helpers_1.status)(400, error.message);
             }
-            return (0, helpers_js_1.status)(400, "Failed to parse upload");
+            return (0, helpers_1.status)(400, "Failed to parse upload");
         }
     });
 };

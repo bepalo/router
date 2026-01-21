@@ -67,7 +67,7 @@ class Tree {
             else {
                 const value = !keyPart
                     ? node.value
-                    : (_b = (_a = node.children.get(keyPart)) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : (_c = node.children.get("*")) === null || _c === void 0 ? void 0 : _c.value;
+                    : ((_b = (_a = node.children.get(keyPart)) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : (_c = node.children.get("*")) === null || _c === void 0 ? void 0 : _c.value);
                 if (value)
                     values.unshift(value);
                 break;
@@ -91,7 +91,7 @@ class Tree {
             else {
                 const value = !keyPart
                     ? node.value
-                    : (_b = (_a = node.children.get(keyPart)) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : (_c = node.children.get("*")) === null || _c === void 0 ? void 0 : _c.value;
+                    : ((_b = (_a = node.children.get(keyPart)) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : (_c = node.children.get("*")) === null || _c === void 0 ? void 0 : _c.value);
                 return value;
             }
         }

@@ -1,5 +1,5 @@
-export * from "./types.js";
-export * from "./router.js";
-export * from "./helpers.js";
-export * from "./middlewares.js";
+export * from "./types";
+export * from "./router";
+export * from "./helpers";
+export * from "./middlewares";
 //# sourceMappingURL=index.d.ts.map

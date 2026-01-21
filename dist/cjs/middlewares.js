@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authJWT = exports.authAPIKey = exports.authBasic = exports.cors = exports.limitRate = void 0;
-const helpers_js_1 = require("./helpers.js");
+const helpers_1 = require("./helpers");
 const cache_1 = require("@bepalo/cache");
 const time_1 = require("@bepalo/time");
 /**
@@ -73,7 +73,7 @@ const limitRate = (config) => {
             }
             if (entry.tokens <= 0) {
                 ctx.headers.set("Retry-After", Math.ceil((refillInterval - timeElapsed) / refillTimeSecondsDenominator).toFixed());
-                return (0, helpers_js_1.status)(429);
+                return (0, helpers_1.status)(429);
             }
             else {
                 entry.tokens--;
@@ -96,7 +96,7 @@ const limitRate = (config) => {
             entry.lastRefill = now();
             if (entry.tokens <= 0) {
                 ctx.headers.set("Retry-After", Math.ceil(1 / refillRate).toFixed());
-                return (0, helpers_js_1.status)(429);
+                return (0, helpers_1.status)(429);
             }
             else {
                 entry.tokens--;
@@ -183,7 +183,7 @@ const cors = (config) => {
             if (maxAge) {
                 ctx.headers.set("Access-Control-Max-Age", maxAge.toString());
             }
-            return (0, helpers_js_1.status)(204, null);
+            return (0, helpers_1.status)(204, null);
         }
     };
 };
@@ -219,23 +219,23 @@ const authBasic = ({ credentials, type = "raw", separator = ":", realm = "Protec
         const authorization = req.headers.get("authorization");
         ctx.headers.set("WWW-Authenticate", `Basic realm="${realm}", charset="UTF-8"`);
         if (!authorization)
-            return (0, helpers_js_1.status)(401);
+            return (0, helpers_1.status)(401);
         const [scheme, creds] = authorization.split(" ", 2);
         if (scheme.toLowerCase() !== "basic" || !creds)
-            return (0, helpers_js_1.status)(401);
+            return (0, helpers_1.status)(401);
         let xcreds;
         try {
             xcreds = type === "base64" ? atob(creds) : creds;
         }
         catch (_a) {
-            return (0, helpers_js_1.status)(401);
+            return (0, helpers_1.status)(401);
         }
         const [username, password] = xcreds.split(separator, 2);
         if (!username || !password)
-            return (0, helpers_js_1.status)(401);
+            return (0, helpers_1.status)(401);
         const user = credentials.get(username);
         if (!user || password !== user.pass)
-            return (0, helpers_js_1.status)(401);
+            return (0, helpers_1.status)(401);
         ctx[ctxProp] = {
             username,
             role: user.role,
@@ -279,7 +279,7 @@ const authAPIKey = ({ verify, ctxProp = "apiKeyAuth", }) => {
     return (req, ctx) => {
         const apiKey = req.headers.get("X-API-Key");
         if (!apiKey || !verify(apiKey))
-            return (0, helpers_js_1.status)(401);
+            return (0, helpers_1.status)(401);
         ctx[ctxProp] = {
             apiKey,
         };
@@ -339,15 +339,15 @@ const authJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", }) => {
         var _a;
         const authorization = req.headers.get("authorization");
         if (!authorization)
-            return (0, helpers_js_1.status)(401);
+            return (0, helpers_1.status)(401);
         const [scheme, token] = authorization.split(" ", 2);
         if (scheme.toLowerCase() !== "bearer" || !token)
-            return (0, helpers_js_1.status)(401);
+            return (0, helpers_1.status)(401);
         const result = jwt.verifySync(token, verifyOptions);
         if (!result.payload)
-            return (0, helpers_js_1.status)(401, (_a = result.error) === null || _a === void 0 ? void 0 : _a.message);
+            return (0, helpers_1.status)(401, (_a = result.error) === null || _a === void 0 ? void 0 : _a.message);
         if (validate && !validate(result.payload))
-            return (0, helpers_js_1.status)(401);
+            return (0, helpers_1.status)(401);
         ctx[ctxProp] = {
             jwt,
             token,

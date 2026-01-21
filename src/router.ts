@@ -5,7 +5,7 @@
  * @exports Router
  */
 
-import { Tree } from "./tree.js";
+import { Tree } from "./tree";
 import {
   HttpMethod,
   MethodPath,
@@ -13,14 +13,14 @@ import {
   HandlerType,
   HttpPath,
   Handler,
-} from "./types.js";
+} from "./types";
 
 /**
  * Checks if a string is a valid HTTP method.
  * @param {string} method - The method string to validate
  * @returns {boolean} True if the method is valid, false otherwise
  */
-export const isValidHttpMethod = (method: string) => {
+export const isValidHttpMethod = (method: string): boolean => {
   switch (method) {
     case "HEAD":
     case "OPTIONS":
@@ -219,12 +219,7 @@ export class Router<Context extends RouterContext = RouterContext> {
   #defaultFallback?: Handler<Context>;
   #setters: Set<HandlerSetter<Context>> = new Set();
 
-  /**
-   * Static property containing all HTTP methods with wildcard paths.
-   * @type {Array<SplitURL>}
-   * @readonly
-   */
-  static ALL_METHOD_PATHS = splitUrl([
+  static #ALL_METHOD_PATHS = splitUrl([
     "HEAD /.**",
     "OPTIONS /.**",
     "GET /.**",
@@ -530,7 +525,7 @@ export class Router<Context extends RouterContext = RouterContext> {
     const pipeline: Pipeline<Context> = Array.isArray(pipeline_)
       ? pipeline_
       : [pipeline_];
-    const splitUrls = urls === "*" ? Router.ALL_METHOD_PATHS : splitUrl(urls);
+    const splitUrls = urls === "*" ? Router.#ALL_METHOD_PATHS : splitUrl(urls);
     for (const { method, nodes, params, pathname } of splitUrls) {
       const treeNode = this.#trees[handlerType][method];
       const splitPaths = pathname.substring(1).split("/");

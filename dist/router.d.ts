@@ -4,8 +4,8 @@
  * @author Natnael Eshetu
  * @exports Router
  */
-import { Tree } from "./tree.js";
-import { HttpMethod, MethodPath, Pipeline, HandlerType, HttpPath, Handler } from "./types.js";
+import { Tree } from "./tree";
+import { HttpMethod, MethodPath, Pipeline, HandlerType, HttpPath, Handler } from "./types";
 /**
  * Checks if a string is a valid HTTP method.
  * @param {string} method - The method string to validate
@@ -147,12 +147,6 @@ interface HandlerSetter<Context extends RouterContext> {
  */
 export declare class Router<Context extends RouterContext = RouterContext> {
     #private;
-    /**
-     * Static property containing all HTTP methods with wildcard paths.
-     * @type {Array<SplitURL>}
-     * @readonly
-     */
-    static ALL_METHOD_PATHS: SplitURL[];
     /**
      * Gets the routing trees for all handler types.
      * @returns {Record<HandlerType, Record<HttpMethod, Tree<RouteNode<Context>>>>}

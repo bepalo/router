@@ -1,3 +1,4 @@
+import { Handler } from "./types";
 /**
  * Context object containing parsed upload data from multipart/form-data requests.
  * @typedef {Object} CTXUpload
@@ -101,5 +102,5 @@ export type StreamingUploadOptions = {
  *   });
  * });
  */
-export declare const parseUploadStreaming: (options?: StreamingUploadOptions) => <Context extends CTXUpload>(req: Request, ctx: Context) => Promise<Response | undefined>;
+export declare const parseUploadStreaming: <Context extends CTXUpload>(options?: StreamingUploadOptions) => Handler<Context>;
 //# sourceMappingURL=upload-stream.d.ts.map

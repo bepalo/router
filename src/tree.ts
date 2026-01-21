@@ -7,7 +7,7 @@ type TreeObj<V> = Record<string, V | Record<string, V>>;
 
 function getTreeObj<V>(
   node: TreeNode<V>,
-  onHit?: (node: TreeNode<V>) => void
+  onHit?: (node: TreeNode<V>) => void,
 ): TreeObj<V> {
   const obj: TreeObj<V> = {};
   if (node.value) {
@@ -25,7 +25,7 @@ function getTreeObj<V>(
 export class Tree<V> {
   #root?: TreeNode<V>;
 
-  get root() {
+  get root(): TreeNode<V> | undefined {
     return this.#root;
   }
 
@@ -57,7 +57,8 @@ export class Tree<V> {
       } else {
         const value = !keyPart
           ? node.value
-          : node.children.get(keyPart)?.value ?? node.children.get("*")?.value;
+          : (node.children.get(keyPart)?.value ??
+            node.children.get("*")?.value);
         if (value) values.unshift(value);
         break;
       }
@@ -79,7 +80,8 @@ export class Tree<V> {
       } else {
         const value = !keyPart
           ? node.value
-          : node.children.get(keyPart)?.value ?? node.children.get("*")?.value;
+          : (node.children.get(keyPart)?.value ??
+            node.children.get("*")?.value);
         return value;
       }
     }

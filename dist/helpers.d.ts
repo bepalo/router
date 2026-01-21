@@ -1,4 +1,5 @@
-export * from "./upload-stream.js";
+import { Handler } from "./types";
+export * from "./upload-stream";
 type SURecord = Record<string, unknown>;
 type SSRecord = Record<string, string>;
 export interface SocketAddress {
@@ -9,7 +10,7 @@ export interface SocketAddress {
 export type CTXAddress = {
     address: SocketAddress;
 };
-export declare function getHttpStatusText(code: number): "Continue" | "Switching Protocols" | "Processing" | "Early Hints" | "OK" | "Created" | "Accepted" | "Non-Authoritative Information" | "No Content" | "Reset Content" | "Partial Content" | "Multi-Status" | "Already Reported" | "IM Used" | "Multiple Choices" | "Moved Permanently" | "Found" | "See Other" | "Not Modified" | "Use Proxy" | "Temporary Redirect" | "Permanent Redirect" | "Bad Request" | "Unauthorized" | "Payment Required" | "Forbidden" | "Not Found" | "Method Not Allowed" | "Not Acceptable" | "Proxy Authentication Required" | "Request Timeout" | "Conflict" | "Gone" | "Length Required" | "Precondition Failed" | "Payload Too Large" | "URI Too Long" | "Unsupported Media Type" | "Range Not Satisfiable" | "Expectation Failed" | "I'm a teapot" | "Misdirected Request" | "Unprocessable Entity" | "Locked" | "Failed Dependency" | "Too Early" | "Upgrade Required" | "Precondition Required" | "Too Many Requests" | "Request Header Fields Too Large" | "Unavailable For Legal Reasons" | "Internal Server Error" | "Not Implemented" | "Bad Gateway" | "Service Unavailable" | "Gateway Timeout" | "HTTP Version Not Supported" | "Variant Also Negotiates" | "Insufficient Storage" | "Loop Detected" | "Not Extended" | "Network Authentication Required" | "Page Expired" | "Enhance Your Calm" | "Blocked by Windows Parental Controls" | "Invalid Token" | "Token Required" | "Bandwidth Limit Exceeded" | "Invalid SSL Certificate" | "Site is overloaded" | "Site is frozen" | "Network Read Timeout Error" | "Network Connect Timeout Error" | "Informational Response" | "Successful Response" | "Redirection Message" | "Client Error Response" | "Server Error Response" | "Unknown Status Code";
+export declare function getHttpStatusText(code: number): string;
 /**
  * Creates a Response with the specified status code.
  * Defaults to text/plain content-type if not provided in init.headers.
@@ -188,7 +189,7 @@ export type CTXCookie = {
  * const cookieParser = parseCookie();
  * // Use in respondWith: respondWith({}, cookieParser(), ...otherHandlers)
  */
-export declare const parseCookie: () => <Context extends CTXCookie>(req: Request, ctx: Context) => void;
+export declare const parseCookie: <Context extends CTXCookie>() => Handler<Context>;
 /**
  * Context object containing parsed request body.
  * @typedef {Object} CTXBody
@@ -216,10 +217,10 @@ export type SupportedBodyMediaTypes = "application/x-www-form-urlencoded" | "app
  * const bodyParser = parseBody({ maxSize: 5000 });
  * // Use in respondWith: respondWith({}, bodyParser(), ...otherHandlers)
  */
-export declare const parseBody: (options?: {
+export declare const parseBody: <Context extends CTXBody>(options?: {
     accept?: SupportedBodyMediaTypes | SupportedBodyMediaTypes[];
     maxSize?: number;
-}) => <Context extends CTXBody>(req: Request, ctx: Context) => Promise<Response | undefined>;
+}) => Handler<Context>;
 /**
  * Request handler function type.
  * @callback RequestHandler
@@ -262,7 +263,9 @@ export interface RequestErrorHandler<Context = any> {
  *   }
  * );
  */
-export declare const respondWith: <Context = any, Handlers extends Array<RequestHandler<Context>> = Array<RequestHandler<Context>>>(ctxInit: Context, ...handlers: [...Handlers]) => (req: Request) => Promise<Response>;
+export declare const respondWith: <Context = any, Handlers extends Array<RequestHandler<Context>> = Array<RequestHandler<Context>>>(ctxInit: Context, ...handlers: [...Handlers]) => {
+    (req: Request): Promise<Response>;
+};
 /**
  * Creates a request handler with error catching.
  * Similar to respondWith but includes an error handler to catch exceptions.
@@ -286,5 +289,7 @@ export declare const respondWith: <Context = any, Handlers extends Array<Request
  *   }
  * );
  */
-export declare const respondWithCatcher: <Context = any, Handler extends RequestErrorHandler<Context> = RequestErrorHandler<Context>, Handlers extends Array<RequestHandler<Context>> = Array<RequestHandler<Context>>>(ctxInit: Context, catcher: Handler, ...handlers: [...Handlers]) => (req: Request) => Promise<Response>;
+export declare const respondWithCatcher: <Context = any, Handler extends RequestErrorHandler<Context> = RequestErrorHandler<Context>, Handlers extends Array<RequestHandler<Context>> = Array<RequestHandler<Context>>>(ctxInit: Context, catcher: Handler, ...handlers: [...Handlers]) => {
+    (req: Request): Promise<Response>;
+};
 //# sourceMappingURL=helpers.d.ts.map

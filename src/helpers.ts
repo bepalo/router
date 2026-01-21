@@ -1,4 +1,6 @@
-export * from "./upload-stream.js";
+import { Handler } from "./types";
+
+export * from "./upload-stream";
 
 type SURecord = Record<string, unknown>;
 type SSRecord = Record<string, string>;
@@ -11,7 +13,7 @@ export interface SocketAddress {
 
 export type CTXAddress = { address: SocketAddress };
 
-export function getHttpStatusText(code: number) {
+export function getHttpStatusText(code: number): string {
   switch (code) {
     // 1xx Informational
     case 100:
@@ -420,7 +422,7 @@ export const send = (body?: BodyInit, init?: ResponseInit): Response => {
     if (body instanceof URLSearchParams) {
       headers.set("content-type", "application/x-www-form-urlencoded");
       body = body.toString();
-    } else if (body instanceof FormData || body instanceof Buffer) {
+    } else if (body instanceof FormData) {
     } else if (typeof body === "string") {
       headers.set("content-type", "text/plain; charset=utf-8");
     } else if (body instanceof Blob) {
@@ -429,7 +431,12 @@ export const send = (body?: BodyInit, init?: ResponseInit): Response => {
       headers.set("content-type", "application/octet-stream");
     } else if (!(body instanceof ReadableStream)) {
       headers.set("content-type", "application/json");
-      body = JSON.stringify(body);
+      return Response.json(body, {
+        status,
+        statusText,
+        headers,
+        ...init,
+      });
     } else {
       headers.set("content-type", "application/octet-stream");
     }
@@ -580,8 +587,8 @@ export type CTXCookie = {
  * const cookieParser = parseCookie();
  * // Use in respondWith: respondWith({}, cookieParser(), ...otherHandlers)
  */
-export const parseCookie = () => {
-  return <Context extends CTXCookie>(req: Request, ctx: Context) => {
+export const parseCookie = <Context extends CTXCookie>(): Handler<Context> => {
+  return (req: Request, ctx: Context) => {
     const cookie = parseCookieFromRequest(req) ?? {};
     ctx.cookie = cookie;
   };
@@ -619,10 +626,10 @@ export type SupportedBodyMediaTypes =
  * const bodyParser = parseBody({ maxSize: 5000 });
  * // Use in respondWith: respondWith({}, bodyParser(), ...otherHandlers)
  */
-export const parseBody = (options?: {
+export const parseBody = <Context extends CTXBody>(options?: {
   accept?: SupportedBodyMediaTypes | SupportedBodyMediaTypes[]; // defaults to all
   maxSize?: number; // in bytes
-}) => {
+}): Handler<Context> => {
   const accept = options?.accept
     ? Array.isArray(options.accept)
       ? options.accept
@@ -633,7 +640,7 @@ export const parseBody = (options?: {
         "text/plain",
       ] as string[]);
   const maxSize = options?.maxSize ?? 1024 * 1024; // Default 1MB
-  return async <Context extends CTXBody>(req: Request, ctx: Context) => {
+  return async (req: Request, ctx: Context) => {
     const contentType = req.headers.get("content-type")?.split(";", 2)[0];
     if (!(contentType && accept.includes(contentType))) {
       await req.body?.cancel().catch(() => {});
@@ -728,7 +735,7 @@ export const respondWith = <
 >(
   ctxInit: Context,
   ...handlers: [...Handlers]
-) => {
+): { (req: Request): Promise<Response> } => {
   return async (req: Request) => {
     const ctx = ctxInit;
     for (const handler of handlers) {
@@ -773,7 +780,7 @@ export const respondWithCatcher = <
   ctxInit: Context,
   catcher: Handler,
   ...handlers: [...Handlers]
-) => {
+): { (req: Request): Promise<Response> } => {
   return async (req: Request) => {
     const ctx = ctxInit;
     try {

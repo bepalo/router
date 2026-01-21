@@ -25,7 +25,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.respondWithCatcher = exports.respondWith = exports.parseBody = exports.parseCookie = exports.parseCookieFromRequest = exports.clearCookie = exports.setCookie = exports.send = exports.usp = exports.formData = exports.octetStream = exports.blob = exports.json = exports.html = exports.text = exports.status = void 0;
 exports.getHttpStatusText = getHttpStatusText;
-__exportStar(require("./upload-stream.js"), exports);
+__exportStar(require("./upload-stream"), exports);
 function getHttpStatusText(code) {
     switch (code) {
         // 1xx Informational
@@ -406,7 +406,7 @@ const send = (body, init) => {
             headers.set("content-type", "application/x-www-form-urlencoded");
             body = body.toString();
         }
-        else if (body instanceof FormData || body instanceof Buffer) {
+        else if (body instanceof FormData) {
         }
         else if (typeof body === "string") {
             headers.set("content-type", "text/plain; charset=utf-8");
@@ -419,7 +419,9 @@ const send = (body, init) => {
         }
         else if (!(body instanceof ReadableStream)) {
             headers.set("content-type", "application/json");
-            body = JSON.stringify(body);
+            return Response.json(body, Object.assign({ status,
+                statusText,
+                headers }, init));
         }
         else {
             headers.set("content-type", "application/octet-stream");

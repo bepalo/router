@@ -1,6 +1,6 @@
-import { CTXAddress, status } from "./helpers.js";
-import { RouterContext } from "./router.js";
-import { HttpMethod } from "./types.js";
+import { CTXAddress, status } from "./helpers";
+import { RouterContext } from "./router";
+import { Handler, HttpMethod } from "./types";
 import { Cache, CacheConfig } from "@bepalo/cache";
 import { JWT, JwtPayload, JwtVerifyOptions } from "@bepalo/jwt";
 import { Time } from "@bepalo/time";
@@ -51,7 +51,7 @@ export const limitRate = <Context extends RouterContext & CTXAddress>(config: {
   now?: () => number;
   cacheConfig?: CacheConfig<string, any>;
   setXRateLimitHeaders?: boolean;
-}) => {
+}): Handler<Context> => {
   const {
     key,
     refillInterval,
@@ -177,7 +177,7 @@ export const cors = <Context extends RouterContext>(config?: {
   credentials?: boolean | null;
   maxAge?: number | null;
   varyOrigin?: boolean;
-}) => {
+}): Handler<Context> => {
   const {
     origins = "*",
     methods = ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
@@ -292,7 +292,7 @@ export const authBasic = <
   separator?: ":" | " ";
   realm?: string;
   ctxProp?: prop;
-}) => {
+}): Handler<Context> => {
   return (req: Request, ctx: Context) => {
     const authorization = req.headers.get("authorization");
     ctx.headers.set(
@@ -372,7 +372,7 @@ export const authAPIKey = <
 }: {
   verify: (apiKey: string) => boolean;
   ctxProp?: prop;
-}) => {
+}): Handler<Context> => {
   return (req: Request, ctx: Context) => {
     const apiKey = req.headers.get("X-API-Key");
     if (!apiKey || !verify(apiKey)) return status(401);
@@ -461,7 +461,7 @@ export const authJWT = <
   validate?: (payload: Payload) => boolean;
   verifyOptions?: JwtVerifyOptions;
   ctxProp?: prop;
-}) => {
+}): Handler<Context> => {
   return (req: Request, ctx: Context) => {
     const authorization = req.headers.get("authorization");
     if (!authorization) return status(401);

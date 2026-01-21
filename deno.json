@@ -1,10 +1,10 @@
 {
   "name": "@bepalo/router",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "exports": {
     "./mod.ts": "./mod.ts"
   },
-  "description": "A fast and perfect router for JavaScript runtimes.",
+  "description": "A fast and feature-rich router for JavaScript runtimes.",
   "license": "MIT",
   "homepage": "https://github.com/bepalo/router",
   "repository": {
@@ -36,5 +36,5 @@
   "imports": {
     "@bepalo/router": "./src/router.ts"
   },
-  "keywords": ["router", "rest", "http", "https"]
+  "keywords": ["router", "rest", "http", "https", "middleware"]
 }

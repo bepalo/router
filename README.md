@@ -58,9 +58,9 @@ import {
   Router,
   text,
   json,
-  CTXBody,
+  type CTXBody,
   parseBody,
-  CTXUpload,
+  type CTXUpload,
   parseUploadStreaming,
 } from "@bepalo/router";
 
@@ -248,11 +248,11 @@ import {
   send, // Smart response (auto-detects content type)
   setCookie, // Set cookie header
   clearCookie, // Clear cookie
-  CTXCookie,
+  type CTXCookie,
   parseCookie, // Cookie parser
-  CTXBody,
+  type CTXBody,
   parseBody, // Body parser
-  CTXUpload,
+  type CTXUpload,
   parseUploadStreaming, // multi-part-form-data and file upload stream parser
 } from "@bepalo/router";
 
@@ -435,9 +435,9 @@ import {
   json,
   cors,
   limitRate,
-  CTXAddress,
-  SocketAddress,
-  RouterContext,
+  type CTXAddress,
+  type SocketAddress,
+  type RouterContext,
 } from "@bepalo/router";
 
 const router = new Router<RouterContext & CTXAddress>({

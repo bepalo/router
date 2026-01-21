@@ -1,4 +1,5 @@
-import { status } from "./helpers.js";
+import { status } from "./helpers";
+import { Handler } from "./types";
 
 /**
  * Context object containing parsed upload data from multipart/form-data requests.
@@ -147,7 +148,9 @@ export type StreamingUploadOptions = {
  *   });
  * });
  */
-export const parseUploadStreaming = (options?: StreamingUploadOptions) => {
+export const parseUploadStreaming = <Context extends CTXUpload>(
+  options?: StreamingUploadOptions,
+): Handler<Context> => {
   const {
     maxTotalSize = 100 * 1024 * 1024, // 100MB default
     maxFileSize = 20 * 1024 * 1024, // 20MB per file
@@ -166,7 +169,7 @@ export const parseUploadStreaming = (options?: StreamingUploadOptions) => {
     onError,
   } = options || {};
 
-  return async <Context extends CTXUpload>(req: Request, ctx: Context) => {
+  return async (req: Request, ctx: Context) => {
     const contentType = req.headers.get("content-type");
 
     // Check if it's multipart/form-data

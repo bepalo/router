@@ -1,6 +1,6 @@
-import { CTXAddress } from "./helpers.js";
-import { RouterContext } from "./router.js";
-import { HttpMethod } from "./types.js";
+import { CTXAddress } from "./helpers";
+import { RouterContext } from "./router";
+import { Handler, HttpMethod } from "./types";
 import { CacheConfig } from "@bepalo/cache";
 import { JWT, JwtPayload, JwtVerifyOptions } from "@bepalo/jwt";
 /**
@@ -49,7 +49,7 @@ export declare const limitRate: <Context extends RouterContext & CTXAddress>(con
     now?: () => number;
     cacheConfig?: CacheConfig<string, any>;
     setXRateLimitHeaders?: boolean;
-}) => (req: Request, ctx: Context) => Response | undefined;
+}) => Handler<Context>;
 /**
  * Creates a CORS (Cross-Origin Resource Sharing) middleware.
  * Supports preflight requests and configurable CORS headers.
@@ -88,7 +88,7 @@ export declare const cors: <Context extends RouterContext>(config?: {
     credentials?: boolean | null;
     maxAge?: number | null;
     varyOrigin?: boolean;
-}) => (req: Request, ctx: Context) => Response | undefined;
+}) => Handler<Context>;
 /**
  * Context type for Basic Authentication middleware.
  * @template {string} [prop="basicAuth"] - Property name to store auth data in context
@@ -134,7 +134,7 @@ export declare const authBasic: <Context extends CTXBasicAuth, prop extends stri
     separator?: ":" | " ";
     realm?: string;
     ctxProp?: prop;
-}) => (req: Request, ctx: Context) => Response | undefined;
+}) => Handler<Context>;
 /**
  * Context type for API Key Authentication middleware.
  * @template {string} [prop="apiKeyAuth"] - Property name to store auth data in context
@@ -180,7 +180,7 @@ export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext & 
 export declare const authAPIKey: <Context extends CTXAPIKeyAuth, prop extends string = "apiKeyAuth">({ verify, ctxProp, }: {
     verify: (apiKey: string) => boolean;
     ctxProp?: prop;
-}) => (req: Request, ctx: Context) => Response | undefined;
+}) => Handler<Context>;
 /**
  * Context type for JWT Authentication middleware.
  * @template {JwtPayload<{}>} Payload - JWT payload type
@@ -247,5 +247,5 @@ export declare const authJWT: <Payload extends JwtPayload<{}>, Context extends C
     validate?: (payload: Payload) => boolean;
     verifyOptions?: JwtVerifyOptions;
     ctxProp?: prop;
-}) => (req: Request, ctx: Context) => Response | undefined;
+}) => Handler<Context>;
 //# sourceMappingURL=middlewares.d.ts.map
