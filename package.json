@@ -1,0 +1,54 @@
+{
+  "name": "@bepalo/router",
+  "version": "1.0.1",
+  "description": "A fast and feature-rich router for JavaScript runtimes.",
+  "author": "Natnael Eshetu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bepalo/router.git"
+  },
+  "homepage": "https://github.com/bepalo/router#readme",
+  "exports": {
+    "import": "./dist/index.js",
+    "require": "./dist/cjs/index.js"
+  },
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build:esm": "tsc --project tsconfig.esm.json",
+    "build:cjs": "tsc --project tsconfig.cjs.json",
+    "build": "pnpm run build:esm && pnpm run build:cjs",
+    "build:watch": "tsc --watch --project tsconfig.esm.json & tsc --watch --project tsconfig.cjs.json",
+    "prepare": "pnpm run build",
+    "test": "vitest --reporter=dot",
+    "test:ci": "vitest run --reporter=vitest-markdown-reporter --outputFile=test-result.md"
+  },
+  "packageManager": "pnpm@10.13.1",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^24.0.13",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4",
+    "vitest-markdown-reporter": "^0.1.2"
+  },
+  "keywords": [
+    "router",
+    "rest",
+    "http",
+    "https"
+  ],
+  "dependencies": {
+    "@bepalo/cache": "^1.0.3",
+    "@bepalo/jwt": "^2.0.9",
+    "@bepalo/time": "^1.2.11"
+  },
+  "type": "module",
+  "private": true
+}
