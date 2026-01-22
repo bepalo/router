@@ -126,12 +126,14 @@ interface RouterContext {
   address?: SocketAddress | null; // Client address
   response?: Response; // Final response
   error?: Error; // Caught error
-  hooksFound: boolean; // Whether hooks were found
-  aftersFound: boolean; // Whether afters were found
-  filtersFound: boolean; // Whether filters were found
-  handlersFound: boolean; // Whether handlers were found
-  fallbacksFound: boolean; // Whether fallbacks were found
-  catchersFound: boolean; // Whether catchers were found
+  found: {
+    hooks: boolean; // Whether hooks were found
+    afters: boolean; // Whether afters were found
+    filters: boolean; // Whether filters were found
+    handlers: boolean; // Whether handlers were found
+    fallbacks: boolean; // Whether fallbacks were found
+    catchers: boolean; // Whether catchers were found
+  };
 }
 ```
 
@@ -256,6 +258,8 @@ import {
   parseUploadStreaming, // multi-part-form-data and file upload stream parser
 } from "@bepalo/router";
 
+const router = new Router();
+
 // Usage examples
 router.handle("GET /text", () => text("Hello World"));
 router.handle("GET /html", () => html("<h1>Title</h1>"));
@@ -263,10 +267,12 @@ router.handle("GET /json", () => json({ data: "value" }));
 router.handle("GET /status", () => status(204, null)); // No Content
 router.handle("GET /intro.mp4", () => blob(Bun.file("./intro.mp4")));
 router.handle("GET /download", () => octetStream(Bun.file("./intro.mp4")));
+
 router.handle<CTXCookie>("GET /cookie", [
   parseCookie(),
   (req, { cookie }) => json({ cookie }),
 ]);
+
 router.handle<CTXBody>("POST /cookie", [
   parseBody(),
   (req, { body }) => {
@@ -282,12 +288,14 @@ router.handle<CTXBody>("POST /cookie", [
     });
   },
 ]);
+
 router.handle("DELETE /cookie/:name", [
   (req, ctx) =>
     status(200, "OK", {
       headers: [clearCookie(ctx.params.name, { path: "/" })],
     }),
 ]);
+
 router.handle<CTXUpload>("POST /upload", [
   (req, ctx) => {
     let file: Bun.BunFile;
@@ -441,7 +449,10 @@ import {
 } from "@bepalo/router";
 
 const router = new Router<RouterContext & CTXAddress>({
-  defaultHeaders: [["X-Powered-By", "@bepalo/router"]],
+  defaultHeaders: () => [
+    ["X-Powered-By", "@bepalo/router"],
+    ["Date", new Date().toUTCString()]
+  ],
 });
 
 // Global CORS
@@ -449,18 +460,27 @@ router.filter("*", [
   cors({
     origins: ["http://localhost:3000", "https://example.com"],
     methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }),
 ]);
 
 // Rate limiting for API
-router.filter("GET /api/.**", [
-  limitRate({
-    key: (req, ctx) => ctx.address.address || "unknown",
-    maxTokens: 100,
-    refillRate: 10, // 10 tokens per second
-    setXRateLimitHeaders: true,
-  }),
+router.filter(
+  [
+    "GET /api/.**",
+    "POST /api/.**",
+    "PUT /api/.**",
+    "PATCH /api/.**",
+    "DELETE /api/.**",
+  ],
+  [
+    limitRate({
+      key: (req, ctx) => ctx.address.address,
+      maxTokens: 100,
+      refillRate: 10, // 10 tokens per second
+      setXRateLimitHeaders: true,
+    }),
 ]);
 
 // Routes
@@ -504,7 +524,10 @@ router.fallback("*", () => json({ error: "Not found" }, { status: 404 }));
 Bun.serve({
   port: 3000,
   async fetch(req, server) {
-    const address = server.requestIP(req) as SocketAddress;
+    const address = server.requestIP(req) as SocketAddress | null;
+    if(!address) {
+      throw new Error("null client address");
+    }
     return await router.respond(req, { address });
   },
 });
