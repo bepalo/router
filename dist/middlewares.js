@@ -52,7 +52,7 @@ const limitRate = (config) => {
             return true;
         },
     }, setXRateLimitHeaders = false, } = config;
-    let rateLimits = new cache_1.Cache(cacheConfig);
+    const rateLimits = new cache_1.Cache(cacheConfig);
     if (refillInterval) {
         return (req, ctx) => {
             var _a;

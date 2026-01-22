@@ -124,4 +124,11 @@ export type Handler<Context> = (req: Request, ctx: Context) => HandlerResponse;
  * router.handle("GET /users", userPipeline);
  */
 export type Pipeline<Context> = Array<Handler<Context>>;
+/**
+ * HTTP header tuple.
+ *
+ * @typedef {[string, string]} HeaderTuple
+ *
+ */
+export type HeaderTuple = [string, string];
 //# sourceMappingURL=types.d.ts.map

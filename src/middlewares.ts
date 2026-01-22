@@ -75,7 +75,7 @@ export const limitRate = <Context extends RouterContext & CTXAddress>(config: {
     tokens: number;
     lastRefill: number;
   };
-  let rateLimits: Cache<string, CacheEntry> = new Cache(cacheConfig);
+  const rateLimits: Cache<string, CacheEntry> = new Cache(cacheConfig);
   if (refillInterval) {
     return (req: Request, ctx: Context) => {
       const id = key(req, ctx);

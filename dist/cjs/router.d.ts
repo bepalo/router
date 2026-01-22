@@ -5,7 +5,7 @@
  * @exports Router
  */
 import { Tree } from "./tree";
-import { HttpMethod, MethodPath, Pipeline, HandlerType, HttpPath, Handler } from "./types";
+import { HttpMethod, MethodPath, Pipeline, HandlerType, HttpPath, Handler, HeaderTuple } from "./types";
 /**
  * Checks if a string is a valid HTTP method.
  * @param {string} method - The method string to validate
@@ -87,15 +87,19 @@ interface HandlerEnable {
 /**
  * Configuration options for the Router.
  * @typedef {Object} RouterConfig
- * @property {Array<[string, string]>} [defaultHeaders] - Default headers to add to all responses
+ * @property {Array<HeaderTuple>|{(): Array<HeaderTuple>}} [defaultHeaders] - Default headers to add to all responses
  * @property {Handler<Context>} [defaultCatcher] - Default error handler for uncaught exceptions
  * @property {Handler<Context>} [defaultFallback] - Default handler for unmatched routes
  * @property {HandlerEnable} [enable] - Configuration for enabling/disabling handler types
  * @template Context
  */
 export interface RouterConfig<Context extends RouterContext> {
-    defaultHeaders?: Array<[string, string]>;
-    defaultCatcher?: Handler<Context>;
+    defaultHeaders?: Array<HeaderTuple> | {
+        (): Array<HeaderTuple>;
+    };
+    defaultCatcher?: Handler<Context & {
+        error: Error;
+    }>;
     defaultFallback?: Handler<Context>;
     enable?: HandlerEnable;
 }
@@ -159,14 +163,16 @@ export declare class Router<Context extends RouterContext = RouterContext> {
     get enabled(): HandlerEnable;
     /**
      * Gets the default headers configuration.
-     * @returns {Array<[string, string]>}
+     * @returns {Array<HeaderTuple>|{():Array<HeaderTuple>}}
      */
-    get defaultHeaders(): Array<[string, string]>;
+    get defaultHeaders(): Array<HeaderTuple>;
     /**
      * Gets the default catcher handler.
      * @returns {Handler<Context>|undefined}
      */
-    get defaultCatcher(): Handler<Context> | undefined;
+    get defaultCatcher(): Handler<Context & {
+        error: Error;
+    }> | undefined;
     /**
      * Gets the default fallback handler.
      * @returns {Handler<Context>|undefined}

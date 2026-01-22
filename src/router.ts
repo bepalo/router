@@ -13,6 +13,7 @@ import {
   HandlerType,
   HttpPath,
   Handler,
+  HeaderTuple,
 } from "./types";
 
 /**
@@ -134,15 +135,15 @@ interface HandlerEnable {
 /**
  * Configuration options for the Router.
  * @typedef {Object} RouterConfig
- * @property {Array<[string, string]>} [defaultHeaders] - Default headers to add to all responses
+ * @property {Array<HeaderTuple>|{(): Array<HeaderTuple>}} [defaultHeaders] - Default headers to add to all responses
  * @property {Handler<Context>} [defaultCatcher] - Default error handler for uncaught exceptions
  * @property {Handler<Context>} [defaultFallback] - Default handler for unmatched routes
  * @property {HandlerEnable} [enable] - Configuration for enabling/disabling handler types
  * @template Context
  */
 export interface RouterConfig<Context extends RouterContext> {
-  defaultHeaders?: Array<[string, string]>;
-  defaultCatcher?: Handler<Context>;
+  defaultHeaders?: Array<HeaderTuple> | { (): Array<HeaderTuple> };
+  defaultCatcher?: Handler<Context & { error: Error }>;
   defaultFallback?: Handler<Context>;
   enable?: HandlerEnable;
 }
@@ -214,8 +215,8 @@ export class Router<Context extends RouterContext = RouterContext> {
     fallbacks: true,
     catchers: true,
   };
-  #defaultHeaders: Array<[string, string]> = [];
-  #defaultCatcher?: Handler<Context>;
+  #defaultHeaders: Array<HeaderTuple> | { (): Array<HeaderTuple> } = [];
+  #defaultCatcher?: Handler<Context & { error: Error }>;
   #defaultFallback?: Handler<Context>;
   #setters: Set<HandlerSetter<Context>> = new Set();
 
@@ -250,17 +251,19 @@ export class Router<Context extends RouterContext = RouterContext> {
 
   /**
    * Gets the default headers configuration.
-   * @returns {Array<[string, string]>}
+   * @returns {Array<HeaderTuple>|{():Array<HeaderTuple>}}
    */
-  get defaultHeaders(): Array<[string, string]> {
-    return this.#defaultHeaders;
+  get defaultHeaders(): Array<HeaderTuple> {
+    return typeof this.#defaultHeaders === "function"
+      ? this.#defaultHeaders()
+      : this.#defaultHeaders;
   }
 
   /**
    * Gets the default catcher handler.
    * @returns {Handler<Context>|undefined}
    */
-  get defaultCatcher(): Handler<Context> | undefined {
+  get defaultCatcher(): Handler<Context & { error: Error }> | undefined {
     return this.#defaultCatcher;
   }
 
@@ -550,7 +553,7 @@ export class Router<Context extends RouterContext = RouterContext> {
         const node = treeNode.get(splitPaths);
         if (node) {
           const maxLen = Math.min(node.nodes.length, splitPaths.length);
-          let colliding: number[] = [];
+          const colliding: number[] = [];
           for (let i = 0; i < maxLen; i++) {
             if (
               node.nodes[i] === "*"
@@ -599,7 +602,7 @@ export class Router<Context extends RouterContext = RouterContext> {
       return new Response("Method Not Allowed", {
         status: 405,
         statusText: "Method Not Allowed",
-        headers: context?.headers ?? new Headers(this.#defaultHeaders),
+        headers: context?.headers ?? new Headers(this.defaultHeaders),
       });
     }
     let response: void | boolean | Response = undefined;
@@ -625,9 +628,11 @@ export class Router<Context extends RouterContext = RouterContext> {
     const fallbackNodes = this.enabled.fallbacks
       ? this.#trees.fallback[method].getAll(key)
       : (emptyArray as RouteNode<Context>[]);
-    const catcherNodes = this.enabled.catchers
-      ? this.#trees.catcher[method].getAll(key)
-      : (emptyArray as RouteNode<Context>[]);
+    const catcherNodes = (
+      this.enabled.catchers
+        ? this.#trees.catcher[method].getAll(key)
+        : emptyArray
+    ) as RouteNode<Context & { error: Error }>[];
     const found = {
       hooks: hookNodes.length > 0,
       afters: afterNodes.length > 0,
@@ -638,7 +643,7 @@ export class Router<Context extends RouterContext = RouterContext> {
     };
     const ctx = {
       params: context?.params ?? {},
-      headers: context?.headers ?? new Headers(this.#defaultHeaders),
+      headers: context?.headers ?? new Headers(this.defaultHeaders),
       found,
       ...context,
     } as Context;
@@ -766,14 +771,17 @@ export class Router<Context extends RouterContext = RouterContext> {
         }
         for (const catcherNode of catcherNodes) {
           for (const catcher of catcherNode.pipeline) {
-            response = await catcher(req, ctx);
+            response = await catcher(req, ctx as Context & { error: Error });
             if (response) break;
           }
           if (response) break;
         }
       }
       if (!(response instanceof Response) && this.#defaultCatcher) {
-        response = await this.#defaultCatcher(req, ctx);
+        response = await this.#defaultCatcher(
+          req,
+          ctx as Context & { error: Error },
+        );
       }
       if (!(response instanceof Response)) {
         response = new Response("Internal Server Error", {

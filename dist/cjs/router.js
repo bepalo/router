@@ -113,10 +113,12 @@ class Router {
     }
     /**
      * Gets the default headers configuration.
-     * @returns {Array<[string, string]>}
+     * @returns {Array<HeaderTuple>|{():Array<HeaderTuple>}}
      */
     get defaultHeaders() {
-        return __classPrivateFieldGet(this, _Router_defaultHeaders, "f");
+        return typeof __classPrivateFieldGet(this, _Router_defaultHeaders, "f") === "function"
+            ? __classPrivateFieldGet(this, _Router_defaultHeaders, "f").call(this)
+            : __classPrivateFieldGet(this, _Router_defaultHeaders, "f");
     }
     /**
      * Gets the default catcher handler.
@@ -347,7 +349,7 @@ class Router {
                 const node = treeNode.get(splitPaths);
                 if (node) {
                     const maxLen = Math.min(node.nodes.length, splitPaths.length);
-                    let colliding = [];
+                    const colliding = [];
                     for (let i = 0; i < maxLen; i++) {
                         if (node.nodes[i] === "*"
                             ? splitPaths[i].startsWith(":") || splitPaths[i] === "*"
@@ -393,7 +395,7 @@ class Router {
                 return new Response("Method Not Allowed", {
                     status: 405,
                     statusText: "Method Not Allowed",
-                    headers: (_b = context === null || context === void 0 ? void 0 : context.headers) !== null && _b !== void 0 ? _b : new Headers(__classPrivateFieldGet(this, _Router_defaultHeaders, "f")),
+                    headers: (_b = context === null || context === void 0 ? void 0 : context.headers) !== null && _b !== void 0 ? _b : new Headers(this.defaultHeaders),
                 });
             }
             let response = undefined;
@@ -416,9 +418,9 @@ class Router {
             const fallbackNodes = this.enabled.fallbacks
                 ? __classPrivateFieldGet(this, _Router_trees, "f").fallback[method].getAll(key)
                 : emptyArray;
-            const catcherNodes = this.enabled.catchers
+            const catcherNodes = (this.enabled.catchers
                 ? __classPrivateFieldGet(this, _Router_trees, "f").catcher[method].getAll(key)
-                : emptyArray;
+                : emptyArray);
             const found = {
                 hooks: hookNodes.length > 0,
                 afters: afterNodes.length > 0,
@@ -427,7 +429,7 @@ class Router {
                 fallbacks: fallbackNodes.length > 0,
                 catchers: catcherNodes.length > 0,
             };
-            const ctx = Object.assign({ params: (_c = context === null || context === void 0 ? void 0 : context.params) !== null && _c !== void 0 ? _c : {}, headers: (_d = context === null || context === void 0 ? void 0 : context.headers) !== null && _d !== void 0 ? _d : new Headers(__classPrivateFieldGet(this, _Router_defaultHeaders, "f")), found }, context);
+            const ctx = Object.assign({ params: (_c = context === null || context === void 0 ? void 0 : context.params) !== null && _c !== void 0 ? _c : {}, headers: (_d = context === null || context === void 0 ? void 0 : context.headers) !== null && _d !== void 0 ? _d : new Headers(this.defaultHeaders), found }, context);
             try {
                 // hooks
                 if (found.hooks) {
