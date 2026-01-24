@@ -555,11 +555,13 @@ export class Router<Context extends RouterContext = RouterContext> {
           const maxLen = Math.min(node.nodes.length, splitPaths.length);
           const colliding: number[] = [];
           for (let i = 0; i < maxLen; i++) {
-            if (
-              node.nodes[i] === "*"
-                ? splitPaths[i].startsWith(":") || splitPaths[i] === "*"
-                : node.nodes[i] === splitPaths[i]
-            ) {
+            if (node.nodes[i] === "*") {
+              if (splitPaths[i].startsWith(":") || splitPaths[i] === "*") {
+                colliding.unshift(i);
+              } else {
+                break;
+              }
+            } else if (node.nodes[i] === splitPaths[i]) {
               colliding.unshift(i);
             }
           }

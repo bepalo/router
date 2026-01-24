@@ -2,16 +2,16 @@
 
 | 🕙 Start time | ⌛ Duration |
 | --- | ---: |
-| 1/21/2026, 5:59:49 AM | 0.568 s |
+| 1/24/2026, 12:59:50 PM | 0.825 s |
 
 | | ✅ Passed | ❌ Failed | ⏩ Skipped | 🚧 Todo | ⚪ Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
 |Test Suites|45|0|0|0|45|
 |Tests|155|0|0|0|155|
 
-## ✅ <a id="file0" href="#file0">tests/helpers.test.js</a> [[link](https://github.com/bepalo/router/blob/eb701c726c36a275073a7c28feac6384e881ec33/tests/helpers.test.js)]
+## ✅ <a id="file0" href="#file0">tests/helpers.test.js</a> [[link](https://github.com/bepalo/router/blob/fbf15a3c14a2454f701414e2c044a1037d054918/tests/helpers.test.js)]
 
-71 passed, 0 failed, 0 skipped, 0 todo, done in 40.15519199999994 s
+71 passed, 0 failed, 0 skipped, 0 todo, done in 47.708683000000065 s
 
 ```
 ✅ Response Helpers › status()
@@ -107,9 +107,9 @@
    ✅ respondWith with error in handler
 ```
 
-## ✅ <a id="file1" href="#file1">tests/router.test.js</a> [[link](https://github.com/bepalo/router/blob/eb701c726c36a275073a7c28feac6384e881ec33/tests/router.test.js)]
+## ✅ <a id="file1" href="#file1">tests/router.test.js</a> [[link](https://github.com/bepalo/router/blob/fbf15a3c14a2454f701414e2c044a1037d054918/tests/router.test.js)]
 
-84 passed, 0 failed, 0 skipped, 0 todo, done in 115.80134399999997 s
+84 passed, 0 failed, 0 skipped, 0 todo, done in 155.39858100000015 s
 
 ```
 ✅ Router › Core Router Functionality › Constructor and Configuration
