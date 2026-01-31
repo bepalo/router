@@ -63,6 +63,7 @@ import {
   type CTXUpload,
   parseUploadStreaming,
 } from "@bepalo/router";
+// } from "jsr:@bepalo/router"; // for deno
 
 // Create a router instance
 const router = new Router();
@@ -94,7 +95,93 @@ Bun.serve({
   fetch: (req) => router.respond(req),
 });
 
+// Start server (Deno example)
+Deno.serve(
+  {
+    port: 3000,
+    onListen: () => console.log("Server listening on http://localhost:3000"),
+  },
+  router.respond.bind(router),
+);
+
 console.log("Server running at http://localhost:3000");
+```
+
+### Serve with client address
+
+```js
+// Bun example
+Bun.serve({
+  port: 3000,
+  async fetch(req, server) {
+    const address = server.requestIP(req) as SocketAddress;
+    return await router.respond(req, { address });
+  },
+});
+console.log("Server running at http://localhost:3000");
+
+// Deno example
+Deno.serve(
+  {
+    port: 3000,
+    onListen: () => console.log("Server listening on http://localhost:3000"),
+  },
+  async (req, { remoteAddr }) => {
+    const address = {
+      family: remoteAddr.transport,
+      address: remoteAddr.hostname,
+      port: remoteAddr.port,
+    } as SocketAddress;
+    return router.respond(req, { address });
+  },
+  // router.respond.bind(router),
+);
+
+// Nodejs example. very slow
+http.createServer(async (req, res) => {
+  const url = new URL(req.url || "/", `http://${req.headers.host}`);
+
+  // Build fetch request
+  const headers = new Headers();
+  Object.entries(req.headers).forEach(
+    ([k, v]) => v && headers.set(k, v.toString()),
+  );
+
+  const request = new Request(url, {
+    method: req.method,
+    headers,
+    body: ["GET", "HEAD"].includes(req.method) ? undefined : req,
+    duplex: "half",
+  });
+
+  const address = {
+    family: req.socket.remoteFamily,
+    address: req.socket.remoteAddress,
+    port: req.socket.remotePort,
+  };
+  try {
+    const response = await router.respond(request, { address });
+
+    res.writeHead(
+      response.status,
+      response.statusText,
+      Object.fromEntries(response.headers.entries()),
+    );
+    if (response.body) {
+      const reader = response.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+    }
+    res.end();
+  } catch {
+    res.writeHead(500).end();
+  }
+}).on("connection", (socket) => socket.setNoDelay(true))
+  .listen(3000, () => console.log("Server running on port 3000"));
+
 ```
 
 ## 📚 Core Concepts
