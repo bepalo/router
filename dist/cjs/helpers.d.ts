@@ -41,7 +41,9 @@ export declare const redirect: (location: string, init?: ResponseInit) => Respon
  * @param {string} path - The new path to forward to
  * @returns {Response} A Response object with the forwarded request's response
  */
-export declare const forward: <XContext = {}>(path: string) => Handler<RouterContext<XContext>>;
+export declare const forward: <XContext = {}>(path: string, options?: {
+    method: string;
+}) => Handler<RouterContext<XContext>>;
 /**
  * Creates a text/plain Response.
  * Defaults to status 200 and text/plain content-type if not specified.

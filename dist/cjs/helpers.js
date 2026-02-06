@@ -244,13 +244,14 @@ exports.redirect = redirect;
  * @param {string} path - The new path to forward to
  * @returns {Response} A Response object with the forwarded request's response
  */
-const forward = (path) => {
+const forward = (path, options) => {
     return function (req, ctx) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             const url = new URL(req.url);
             url.pathname = path;
             const newReq = new Request(url.toString(), {
-                method: req.method,
+                method: (_a = options === null || options === void 0 ? void 0 : options.method) !== null && _a !== void 0 ? _a : req.method,
                 headers: req.headers,
                 body: req.body ? req.clone().body : undefined,
             });
