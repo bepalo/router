@@ -1,15 +1,15 @@
-import { Handler } from "./types";
+import Router, { RouterContext } from "./router";
+import { Handler, HandlerType, HttpMethod, MethodPath } from "./types";
 
 export * from "./upload-stream";
-
-type SURecord = Record<string, unknown>;
-type SSRecord = Record<string, string>;
 
 export interface SocketAddress {
   address: string;
   family: string;
   port: number;
 }
+
+export type CTXError = { error: Error };
 
 export type CTXAddress = { address: SocketAddress };
 
@@ -205,15 +205,60 @@ export const status = (
 ): Response => {
   const statusText = init?.statusText ?? getHttpStatusText(status);
   const headers = new Headers(init?.headers);
-  if (!headers.has("content-type")) {
+  if (content !== null && !headers.has("content-type")) {
     headers.set("content-type", "text/plain");
   }
   return new Response(content !== undefined ? content : statusText, {
-    status,
     statusText,
-    headers,
     ...init,
+    status,
+    headers,
   });
+};
+
+/**
+ * Creates a redirect Response.
+ * Defaults to 302 Found unless another status is provided.
+ * @param {string} location - The URL to redirect to
+ * @param {number} [code=302] - The HTTP status code (301, 302, 303, 307, 308)
+ * @param {ResponseInit} [init] - Additional response initialization options
+ * @returns {Response} A Response object with Location header
+ */
+export const redirect = (location: string, init?: ResponseInit): Response => {
+  const status = init?.status ?? 302;
+  const statusText = init?.statusText ?? getHttpStatusText(status);
+  const headers = new Headers(init?.headers);
+  headers.set("Location", location);
+  return new Response(null, {
+    statusText,
+    ...init,
+    status,
+    headers,
+  });
+};
+
+/**
+ * Forwards the request to another handler internally.
+ * Does not change the URL or send a redirect to the client.
+ * @param {string} path - The new path to forward to
+ * @returns {Response} A Response object with the forwarded request's response
+ */
+export const forward = <XContext = {}>(
+  path: string,
+  options?: {
+    method: string;
+  },
+): Handler<RouterContext<XContext>> => {
+  return async function (this: Router<XContext>, req, ctx) {
+    const url = new URL(req.url);
+    url.pathname = path;
+    const newReq = new Request(url.toString(), {
+      method: options?.method ?? req.method,
+      headers: req.headers,
+      body: req.body ? req.clone().body : undefined,
+    });
+    return this.respond(newReq, ctx);
+  };
 };
 
 /**
@@ -234,10 +279,10 @@ export const text = (content: string, init?: ResponseInit): Response => {
     headers.set("content-type", "text/plain");
   }
   return new Response(content, {
-    status,
     statusText,
-    headers,
     ...init,
+    status,
+    headers,
   });
 };
 
@@ -259,10 +304,10 @@ export const html = (content: string, init?: ResponseInit): Response => {
     headers.set("content-type", "text/html");
   }
   return new Response(content, {
-    status,
     statusText,
-    headers,
     ...init,
+    status,
+    headers,
   });
 };
 
@@ -285,10 +330,10 @@ export const json = (body: any, init?: ResponseInit): Response => {
     headers.set("content-type", "application/json");
   }
   return Response.json(body, {
-    status,
     statusText,
-    headers,
     ...init,
+    status,
+    headers,
   });
 };
 
@@ -312,10 +357,10 @@ export const blob = (blob: Blob, init?: ResponseInit): Response => {
   }
   headers.set("content-length", blob.size.toFixed());
   return new Response(blob, {
-    status,
     statusText,
-    headers,
     ...init,
+    status,
+    headers,
   });
 };
 
@@ -347,10 +392,10 @@ export const octetStream = (
     );
   }
   return new Response(octet, {
-    status,
     statusText,
-    headers,
     ...init,
+    status,
+    headers,
   });
 };
 
@@ -371,9 +416,9 @@ export const formData = (
   const status = init?.status ?? 200;
   const statusText = init?.statusText ?? getHttpStatusText(status);
   return new Response(formData, {
-    status,
     statusText,
     ...init,
+    status,
   });
 };
 
@@ -394,10 +439,10 @@ export const usp = (usp?: URLSearchParams, init?: ResponseInit): Response => {
     headers.set("content-type", "application/x-www-form-urlencoded");
   }
   return new Response(usp, {
-    status,
     statusText,
-    headers,
     ...init,
+    status,
+    headers,
   });
 };
 
@@ -434,18 +479,18 @@ export const send = (body?: BodyInit, init?: ResponseInit): Response => {
       return Response.json(body, {
         status,
         statusText,
-        headers,
         ...init,
+        headers,
       });
     } else {
       headers.set("content-type", "application/octet-stream");
     }
   }
   return new Response(body, {
-    status,
     statusText,
-    headers,
     ...init,
+    status,
+    headers,
   });
 };
 
@@ -574,10 +619,10 @@ export const parseCookieFromRequest = <Expected extends Record<string, string>>(
 /**
  * Context object containing parsed cookies.
  * @typedef {Object} CTXCookie
- * @property {SSRecord} cookie - Parsed cookies from the request
+ * @property {Record<string, string>} cookie - Parsed cookies from the request
  */
 export type CTXCookie = {
-  cookie: SSRecord;
+  cookie: Record<string, string>;
 };
 
 /**
@@ -597,10 +642,10 @@ export const parseCookie = <Context extends CTXCookie>(): Handler<Context> => {
 /**
  * Context object containing parsed request body.
  * @typedef {Object} CTXBody
- * @property {SURecord} body - Parsed request body data
+ * @property {Record<string, unknown>} body - Parsed request body data
  */
 export type CTXBody = {
-  body: SURecord;
+  body: Record<string, unknown>;
 };
 
 /**
@@ -660,7 +705,8 @@ export const parseBody = <Context extends CTXBody>(options?: {
         }
         case "application/json": {
           const body = await req.json();
-          ctx.body = typeof body === "object" ? (body as SURecord) : {};
+          ctx.body =
+            typeof body === "object" ? (body as Record<string, unknown>) : {};
           break;
         }
         case "text/plain": {

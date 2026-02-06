@@ -5,6 +5,7 @@
  * @exports Router
  */
 
+import { CTXError } from "./helpers";
 import { Tree } from "./tree";
 import {
   HttpMethod,
@@ -14,6 +15,7 @@ import {
   HttpPath,
   Handler,
   HeaderTuple,
+  BoundHandler,
 } from "./types";
 
 /**
@@ -57,7 +59,7 @@ type NodeParam = {
  * @property {Map<number, NodeParam>} [params] - Parameters extracted from the path
  * @template Context
  */
-type RouteNode<Context> = {
+type RouteNode<Context = {}> = {
   method: HttpMethod;
   pathname: string;
   nodes: Array<string>;
@@ -80,7 +82,7 @@ type RouteNode<Context> = {
  * @property {boolean} found.fallbacks - Whether any fallbacks were found
  * @property {boolean} found.catchers - Whether any catchers were found
  */
-export interface RouterContext {
+export type RouterContext<XContext = {}> = {
   params: Record<string, string>;
   headers: Headers;
   response?: Response;
@@ -93,14 +95,14 @@ export interface RouterContext {
     fallbacks: boolean;
     catchers: boolean;
   };
-}
+} & XContext;
 
 /**
  * Initializes method trees for all HTTP methods.
  * @returns {Record<HttpMethod, Tree<RouteNode<Context>>>} Trees for each HTTP method
  * @template Context
  */
-function initMethodTrees<Context>(): Record<
+function initMethodTrees<Context = {}>(): Record<
   HttpMethod,
   Tree<RouteNode<Context>>
 > {
@@ -141,9 +143,9 @@ interface HandlerEnable {
  * @property {HandlerEnable} [enable] - Configuration for enabling/disabling handler types
  * @template Context
  */
-export interface RouterConfig<Context extends RouterContext> {
+export interface RouterConfig<Context extends RouterContext = RouterContext> {
   defaultHeaders?: Array<HeaderTuple> | { (): Array<HeaderTuple> };
-  defaultCatcher?: Handler<Context & { error: Error }>;
+  defaultCatcher?: Handler<Context & CTXError>;
   defaultFallback?: Handler<Context>;
   enable?: HandlerEnable;
 }
@@ -160,7 +162,7 @@ export interface HandlerOptions {
 /**
  * Handler settings infromation for use with append and auditing
  */
-interface HandlerSetter<Context extends RouterContext> {
+interface HandlerSetter<Context extends RouterContext = RouterContext> {
   handlerType: HandlerType;
   urls: "*" | MethodPath | Array<MethodPath>;
   pipeline: Handler<Context> | Pipeline<Context>;
@@ -174,7 +176,8 @@ const emptyArray: unknown[] = [];
  * A fast radix-trie based router for JavaScript runtimes.
  * Supports hooks, filters, handlers, fallbacks, catchers, and after handlers.
  * @class
- * @template Context
+ * @template EXContext
+ * @template Context extends RouterContext<EXContext>
  * @example
  * const router = new Router();
  *
@@ -199,7 +202,10 @@ const emptyArray: unknown[] = [];
  * const response = await router.respond(new Request("http://localhost/"));
  *
  */
-export class Router<Context extends RouterContext = RouterContext> {
+export class Router<
+  EXTContext = {},
+  Context extends RouterContext<EXTContext> = RouterContext<EXTContext>,
+> {
   #trees: Record<HandlerType, Record<HttpMethod, Tree<RouteNode<Context>>>> = {
     filter: initMethodTrees<Context>(),
     hook: initMethodTrees<Readonly<Context>>(),
@@ -216,7 +222,7 @@ export class Router<Context extends RouterContext = RouterContext> {
     catchers: true,
   };
   #defaultHeaders: Array<HeaderTuple> | { (): Array<HeaderTuple> } = [];
-  #defaultCatcher?: Handler<Context & { error: Error }>;
+  #defaultCatcher?: Handler<Context & CTXError>;
   #defaultFallback?: Handler<Context>;
   #setters: Set<HandlerSetter<Context>> = new Set();
 
@@ -263,7 +269,7 @@ export class Router<Context extends RouterContext = RouterContext> {
    * Gets the default catcher handler.
    * @returns {Handler<Context>|undefined}
    */
-  get defaultCatcher(): Handler<Context & { error: Error }> | undefined {
+  get defaultCatcher(): Handler<Context & CTXError> | undefined {
     return this.#defaultCatcher;
   }
 
@@ -325,7 +331,7 @@ export class Router<Context extends RouterContext = RouterContext> {
     return this.setRoutes(
       "hook",
       urls,
-      pipeline as Handler<Context> | Pipeline<Context>,
+      pipeline as unknown as Handler<Context> | Pipeline<Context>,
       options,
     );
   }
@@ -352,7 +358,7 @@ export class Router<Context extends RouterContext = RouterContext> {
     return this.setRoutes(
       "after",
       urls,
-      pipeline as Handler<Context> | Pipeline<Context>,
+      pipeline as unknown as Handler<Context> | Pipeline<Context>,
       options,
     );
   }
@@ -380,7 +386,7 @@ export class Router<Context extends RouterContext = RouterContext> {
     return this.setRoutes(
       "filter",
       urls,
-      pipeline as Handler<Context> | Pipeline<Context>,
+      pipeline as unknown as Handler<Context> | Pipeline<Context>,
       options,
     );
   }
@@ -407,7 +413,7 @@ export class Router<Context extends RouterContext = RouterContext> {
     return this.setRoutes(
       "handler",
       urls,
-      pipeline as Handler<Context> | Pipeline<Context>,
+      pipeline as unknown as Handler<Context> | Pipeline<Context>,
       options,
     );
   }
@@ -433,7 +439,7 @@ export class Router<Context extends RouterContext = RouterContext> {
     return this.setRoutes(
       "fallback",
       urls,
-      pipeline as Handler<Context> | Pipeline<Context>,
+      pipeline as unknown as Handler<Context> | Pipeline<Context>,
       options,
     );
   }
@@ -442,9 +448,9 @@ export class Router<Context extends RouterContext = RouterContext> {
    * Registers an error handler for catching exceptions.
    * Catchers receive the error in the context and can return a response.
    * @param {"*"|MethodPath|Array<MethodPath>} urls - URL patterns to match
-   * @param {Handler<Context & XContext & { error: Error }>|Pipeline<Context & XContext & { error: Error }>} pipeline - Handler(s) to execute
+   * @param {Handler<Context & XContext & CTXError>|Pipeline<Context & XContext & CTXError>} pipeline - Handler(s) to execute
    * @param {HandlerOptions} [options] - Registration options
-   * @returns {Router<Context & XContext & { error: Error }>} The router instance for chaining
+   * @returns {Router<Context & XContext & CTXError>} The router instance for chaining
    * @template XContext
    * @example
    * router.catch("GET /**", (req, ctx) => {
@@ -455,14 +461,14 @@ export class Router<Context extends RouterContext = RouterContext> {
   catch<XContext = {}>(
     urls: "*" | MethodPath | Array<MethodPath>,
     pipeline:
-      | Handler<Context & XContext & { error: Error }>
-      | Pipeline<Context & XContext & { error: Error }>,
+      | Handler<Context & XContext & CTXError>
+      | Pipeline<Context & XContext & CTXError>,
     options?: HandlerOptions,
-  ): Router<Context & XContext & { error: Error }> {
+  ): Router<Context & XContext & CTXError> {
     return this.setRoutes(
       "catcher",
       urls,
-      pipeline as Handler<Context> | Pipeline<Context>,
+      pipeline as unknown as Handler<Context> | Pipeline<Context>,
       options,
     );
   }
@@ -514,7 +520,7 @@ export class Router<Context extends RouterContext = RouterContext> {
    * Low-level method to register routes of any handler type.
    * @param {HandlerType} handlerType - The type of handler to register
    * @param {"*"|MethodPath|Array<MethodPath>} urls - URL patterns to match
-   * @param {Handler<Context>|Pipeline<Context>} pipeline_ - Handler(s) to execute
+   * @param {Handler<Context>|Pipeline<Context>|Handler<Context&CTXError>|Pipeline<Context&CTXError>} pipeline_ - Handler(s) to execute
    * @param {HandlerOptions} [options] - Registration options
    * @returns {Router<Context>} The router instance for chaining
    * @private
@@ -522,12 +528,17 @@ export class Router<Context extends RouterContext = RouterContext> {
   setRoutes(
     handlerType: HandlerType,
     urls: "*" | MethodPath | Array<MethodPath>,
-    pipeline_: Handler<Context> | Pipeline<Context>,
+    pipeline_:
+      | Handler<Context>
+      | Pipeline<Context>
+      | Handler<Context & CTXError>
+      | Pipeline<Context & CTXError>,
     options?: HandlerOptions,
   ): Router<Context> {
-    const pipeline: Pipeline<Context> = Array.isArray(pipeline_)
-      ? pipeline_
-      : [pipeline_];
+    const pipeline: Pipeline<Context> | Pipeline<Context & CTXError> =
+      Array.isArray(pipeline_)
+        ? pipeline_
+        : ([pipeline_] as Pipeline<Context> | Pipeline<Context & CTXError>);
     const splitUrls = urls === "*" ? Router.#ALL_METHOD_PATHS : splitUrl(urls);
     for (const { method, nodes, params, pathname } of splitUrls) {
       const treeNode = this.#trees[handlerType][method];
@@ -575,7 +586,7 @@ export class Router<Context extends RouterContext = RouterContext> {
       treeNode.set(nodes, {
         method,
         nodes,
-        pipeline,
+        pipeline: pipeline as Pipeline<Context>,
         pathname,
         params,
       });
@@ -584,7 +595,7 @@ export class Router<Context extends RouterContext = RouterContext> {
     this.#setters.add({
       handlerType,
       urls,
-      pipeline: pipeline_,
+      pipeline: pipeline_ as Pipeline<Context>,
       options,
     });
     return this;
@@ -634,7 +645,7 @@ export class Router<Context extends RouterContext = RouterContext> {
       this.enabled.catchers
         ? this.#trees.catcher[method].getAll(key)
         : emptyArray
-    ) as RouteNode<Context & { error: Error }>[];
+    ) as RouteNode<Context & CTXError>[];
     const found = {
       hooks: hookNodes.length > 0,
       afters: afterNodes.length > 0,
@@ -652,7 +663,7 @@ export class Router<Context extends RouterContext = RouterContext> {
     try {
       // hooks
       if (found.hooks) {
-        const params = hookNodes[hookNodes.length - 1].params;
+        const params = hookNodes[0].params;
         if (params) {
           for (const [index, param] of params) {
             ctx.params[param.name] = key[index];
@@ -661,7 +672,10 @@ export class Router<Context extends RouterContext = RouterContext> {
         let hookResponse: void | boolean | Response = undefined;
         for (const hookNode of hookNodes) {
           for (const hook of hookNode.pipeline) {
-            hookResponse = await hook(req, ctx);
+            hookResponse = await (hook as BoundHandler<Context>).bind(this)(
+              req,
+              ctx,
+            );
             if (hookResponse) break;
           }
           if (hookResponse) break;
@@ -669,7 +683,7 @@ export class Router<Context extends RouterContext = RouterContext> {
       }
       // filters
       if (found.filters) {
-        const params = filterNodes[filterNodes.length - 1].params;
+        const params = filterNodes[0].params;
         if (params) {
           for (const [index, param] of params) {
             ctx.params[param.name] = key[index];
@@ -677,7 +691,10 @@ export class Router<Context extends RouterContext = RouterContext> {
         }
         for (const filterNode of filterNodes) {
           for (const filter of filterNode.pipeline) {
-            response = await filter(req, ctx);
+            response = await (filter as BoundHandler<Context>).bind(this)(
+              req,
+              ctx,
+            );
             if (response) break;
           }
           if (response) break;
@@ -685,7 +702,7 @@ export class Router<Context extends RouterContext = RouterContext> {
       }
       // handlers
       if (found.handlers) {
-        const params = handlerNodes[handlerNodes.length - 1].params;
+        const params = handlerNodes[0].params;
         if (params) {
           for (const [index, param] of params) {
             ctx.params[param.name] = key[index];
@@ -694,7 +711,10 @@ export class Router<Context extends RouterContext = RouterContext> {
         if (!(response instanceof Response)) {
           for (const handlerNode of handlerNodes) {
             for (const handler of handlerNode.pipeline) {
-              response = await handler(req, ctx);
+              response = await (handler as BoundHandler<Context>).bind(this)(
+                req,
+                ctx,
+              );
               if (response) break;
             }
             if (response) break;
@@ -704,7 +724,7 @@ export class Router<Context extends RouterContext = RouterContext> {
       // fallbacks
       if (!(response instanceof Response)) {
         if (found.fallbacks) {
-          const params = fallbackNodes[fallbackNodes.length - 1].params;
+          const params = fallbackNodes[0].params;
           if (params) {
             for (const [index, param] of params) {
               ctx.params[param.name] = key[index];
@@ -712,7 +732,10 @@ export class Router<Context extends RouterContext = RouterContext> {
           }
           for (const fallbackNode of fallbackNodes) {
             for (const fallback of fallbackNode.pipeline) {
-              response = await fallback(req, ctx);
+              response = await (fallback as BoundHandler<Context>).bind(this)(
+                req,
+                ctx,
+              );
               if (response) break;
             }
             if (response) break;
@@ -746,7 +769,7 @@ export class Router<Context extends RouterContext = RouterContext> {
             }));
       // after response handlers
       if (found.afters) {
-        const params = afterNodes[afterNodes.length - 1].params;
+        const params = afterNodes[0].params;
         if (params) {
           for (const [index, param] of params) {
             ctx.params[param.name] = key[index];
@@ -755,7 +778,10 @@ export class Router<Context extends RouterContext = RouterContext> {
         let afterResponse: void | boolean | Response = undefined;
         for (const afterNode of afterNodes) {
           for (const after of afterNode.pipeline) {
-            afterResponse = await after(req, ctx);
+            afterResponse = await (after as BoundHandler<Context>).bind(this)(
+              req,
+              ctx,
+            );
             if (afterResponse) break;
           }
           if (afterResponse) break;
@@ -765,7 +791,7 @@ export class Router<Context extends RouterContext = RouterContext> {
       // error handlers
       ctx.error = error instanceof Error ? error : new Error(String(error));
       if (found.catchers) {
-        const params = catcherNodes[catcherNodes.length - 1].params;
+        const params = catcherNodes[0].params;
         if (params) {
           for (const [index, param] of params) {
             ctx.params[param.name] = key[index];
@@ -773,17 +799,17 @@ export class Router<Context extends RouterContext = RouterContext> {
         }
         for (const catcherNode of catcherNodes) {
           for (const catcher of catcherNode.pipeline) {
-            response = await catcher(req, ctx as Context & { error: Error });
+            response = await (catcher as BoundHandler<Context>).bind(this)(
+              req,
+              ctx as Context & CTXError,
+            );
             if (response) break;
           }
           if (response) break;
         }
       }
       if (!(response instanceof Response) && this.#defaultCatcher) {
-        response = await this.#defaultCatcher(
-          req,
-          ctx as Context & { error: Error },
-        );
+        response = await this.#defaultCatcher(req, ctx as Context & CTXError);
       }
       if (!(response instanceof Response)) {
         response = new Response("Internal Server Error", {

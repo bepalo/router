@@ -71,7 +71,8 @@ const emptyArray = [];
  * A fast radix-trie based router for JavaScript runtimes.
  * Supports hooks, filters, handlers, fallbacks, catchers, and after handlers.
  * @class
- * @template Context
+ * @template EXContext
+ * @template Context extends RouterContext<EXContext>
  * @example
  * const router = new Router();
  *
@@ -268,9 +269,9 @@ class Router {
      * Registers an error handler for catching exceptions.
      * Catchers receive the error in the context and can return a response.
      * @param {"*"|MethodPath|Array<MethodPath>} urls - URL patterns to match
-     * @param {Handler<Context & XContext & { error: Error }>|Pipeline<Context & XContext & { error: Error }>} pipeline - Handler(s) to execute
+     * @param {Handler<Context & XContext & CTXError>|Pipeline<Context & XContext & CTXError>} pipeline - Handler(s) to execute
      * @param {HandlerOptions} [options] - Registration options
-     * @returns {Router<Context & XContext & { error: Error }>} The router instance for chaining
+     * @returns {Router<Context & XContext & CTXError>} The router instance for chaining
      * @template XContext
      * @example
      * router.catch("GET /**", (req, ctx) => {
@@ -321,7 +322,7 @@ class Router {
      * Low-level method to register routes of any handler type.
      * @param {HandlerType} handlerType - The type of handler to register
      * @param {"*"|MethodPath|Array<MethodPath>} urls - URL patterns to match
-     * @param {Handler<Context>|Pipeline<Context>} pipeline_ - Handler(s) to execute
+     * @param {Handler<Context>|Pipeline<Context>|Handler<Context&CTXError>|Pipeline<Context&CTXError>} pipeline_ - Handler(s) to execute
      * @param {HandlerOptions} [options] - Registration options
      * @returns {Router<Context>} The router instance for chaining
      * @private
@@ -371,7 +372,7 @@ class Router {
             treeNode.set(nodes, {
                 method,
                 nodes,
-                pipeline,
+                pipeline: pipeline,
                 pathname,
                 params,
             });
@@ -439,7 +440,7 @@ class Router {
             try {
                 // hooks
                 if (found.hooks) {
-                    const params = hookNodes[hookNodes.length - 1].params;
+                    const params = hookNodes[0].params;
                     if (params) {
                         for (const [index, param] of params) {
                             ctx.params[param.name] = key[index];
@@ -448,7 +449,7 @@ class Router {
                     let hookResponse = undefined;
                     for (const hookNode of hookNodes) {
                         for (const hook of hookNode.pipeline) {
-                            hookResponse = yield hook(req, ctx);
+                            hookResponse = yield hook.bind(this)(req, ctx);
                             if (hookResponse)
                                 break;
                         }
@@ -458,7 +459,7 @@ class Router {
                 }
                 // filters
                 if (found.filters) {
-                    const params = filterNodes[filterNodes.length - 1].params;
+                    const params = filterNodes[0].params;
                     if (params) {
                         for (const [index, param] of params) {
                             ctx.params[param.name] = key[index];
@@ -466,7 +467,7 @@ class Router {
                     }
                     for (const filterNode of filterNodes) {
                         for (const filter of filterNode.pipeline) {
-                            response = yield filter(req, ctx);
+                            response = yield filter.bind(this)(req, ctx);
                             if (response)
                                 break;
                         }
@@ -476,7 +477,7 @@ class Router {
                 }
                 // handlers
                 if (found.handlers) {
-                    const params = handlerNodes[handlerNodes.length - 1].params;
+                    const params = handlerNodes[0].params;
                     if (params) {
                         for (const [index, param] of params) {
                             ctx.params[param.name] = key[index];
@@ -485,7 +486,7 @@ class Router {
                     if (!(response instanceof Response)) {
                         for (const handlerNode of handlerNodes) {
                             for (const handler of handlerNode.pipeline) {
-                                response = yield handler(req, ctx);
+                                response = yield handler.bind(this)(req, ctx);
                                 if (response)
                                     break;
                             }
@@ -497,7 +498,7 @@ class Router {
                 // fallbacks
                 if (!(response instanceof Response)) {
                     if (found.fallbacks) {
-                        const params = fallbackNodes[fallbackNodes.length - 1].params;
+                        const params = fallbackNodes[0].params;
                         if (params) {
                             for (const [index, param] of params) {
                                 ctx.params[param.name] = key[index];
@@ -505,7 +506,7 @@ class Router {
                         }
                         for (const fallbackNode of fallbackNodes) {
                             for (const fallback of fallbackNode.pipeline) {
-                                response = yield fallback(req, ctx);
+                                response = yield fallback.bind(this)(req, ctx);
                                 if (response)
                                     break;
                             }
@@ -541,7 +542,7 @@ class Router {
                         }));
                 // after response handlers
                 if (found.afters) {
-                    const params = afterNodes[afterNodes.length - 1].params;
+                    const params = afterNodes[0].params;
                     if (params) {
                         for (const [index, param] of params) {
                             ctx.params[param.name] = key[index];
@@ -550,7 +551,7 @@ class Router {
                     let afterResponse = undefined;
                     for (const afterNode of afterNodes) {
                         for (const after of afterNode.pipeline) {
-                            afterResponse = yield after(req, ctx);
+                            afterResponse = yield after.bind(this)(req, ctx);
                             if (afterResponse)
                                 break;
                         }
@@ -563,7 +564,7 @@ class Router {
                 // error handlers
                 ctx.error = error instanceof Error ? error : new Error(String(error));
                 if (found.catchers) {
-                    const params = catcherNodes[catcherNodes.length - 1].params;
+                    const params = catcherNodes[0].params;
                     if (params) {
                         for (const [index, param] of params) {
                             ctx.params[param.name] = key[index];
@@ -571,7 +572,7 @@ class Router {
                     }
                     for (const catcherNode of catcherNodes) {
                         for (const catcher of catcherNode.pipeline) {
-                            response = yield catcher(req, ctx);
+                            response = yield catcher.bind(this)(req, ctx);
                             if (response)
                                 break;
                         }

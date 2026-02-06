@@ -4,6 +4,7 @@
  * @author Natnael Eshetu
  * @exports Router
  */
+import { CTXError } from "./helpers";
 import { Tree } from "./tree";
 import { HttpMethod, MethodPath, Pipeline, HandlerType, HttpPath, Handler, HeaderTuple } from "./types";
 /**
@@ -32,7 +33,7 @@ type NodeParam = {
  * @property {Map<number, NodeParam>} [params] - Parameters extracted from the path
  * @template Context
  */
-type RouteNode<Context> = {
+type RouteNode<Context = {}> = {
     method: HttpMethod;
     pathname: string;
     nodes: Array<string>;
@@ -54,7 +55,7 @@ type RouteNode<Context> = {
  * @property {boolean} found.fallbacks - Whether any fallbacks were found
  * @property {boolean} found.catchers - Whether any catchers were found
  */
-export interface RouterContext {
+export type RouterContext<XContext = {}> = {
     params: Record<string, string>;
     headers: Headers;
     response?: Response;
@@ -67,7 +68,7 @@ export interface RouterContext {
         fallbacks: boolean;
         catchers: boolean;
     };
-}
+} & XContext;
 /**
  * Configuration options for enabling/disabling handler types.
  * @typedef {Object} HandlerEnable
@@ -93,13 +94,11 @@ interface HandlerEnable {
  * @property {HandlerEnable} [enable] - Configuration for enabling/disabling handler types
  * @template Context
  */
-export interface RouterConfig<Context extends RouterContext> {
+export interface RouterConfig<Context extends RouterContext = RouterContext> {
     defaultHeaders?: Array<HeaderTuple> | {
         (): Array<HeaderTuple>;
     };
-    defaultCatcher?: Handler<Context & {
-        error: Error;
-    }>;
+    defaultCatcher?: Handler<Context & CTXError>;
     defaultFallback?: Handler<Context>;
     enable?: HandlerEnable;
 }
@@ -114,7 +113,7 @@ export interface HandlerOptions {
 /**
  * Handler settings infromation for use with append and auditing
  */
-interface HandlerSetter<Context extends RouterContext> {
+interface HandlerSetter<Context extends RouterContext = RouterContext> {
     handlerType: HandlerType;
     urls: "*" | MethodPath | Array<MethodPath>;
     pipeline: Handler<Context> | Pipeline<Context>;
@@ -124,7 +123,8 @@ interface HandlerSetter<Context extends RouterContext> {
  * A fast radix-trie based router for JavaScript runtimes.
  * Supports hooks, filters, handlers, fallbacks, catchers, and after handlers.
  * @class
- * @template Context
+ * @template EXContext
+ * @template Context extends RouterContext<EXContext>
  * @example
  * const router = new Router();
  *
@@ -149,7 +149,7 @@ interface HandlerSetter<Context extends RouterContext> {
  * const response = await router.respond(new Request("http://localhost/"));
  *
  */
-export declare class Router<Context extends RouterContext = RouterContext> {
+export declare class Router<EXTContext = {}, Context extends RouterContext<EXTContext> = RouterContext<EXTContext>> {
     #private;
     /**
      * Gets the routing trees for all handler types.
@@ -170,9 +170,7 @@ export declare class Router<Context extends RouterContext = RouterContext> {
      * Gets the default catcher handler.
      * @returns {Handler<Context>|undefined}
      */
-    get defaultCatcher(): Handler<Context & {
-        error: Error;
-    }> | undefined;
+    get defaultCatcher(): Handler<Context & CTXError> | undefined;
     /**
      * Gets the default fallback handler.
      * @returns {Handler<Context>|undefined}
@@ -267,9 +265,9 @@ export declare class Router<Context extends RouterContext = RouterContext> {
      * Registers an error handler for catching exceptions.
      * Catchers receive the error in the context and can return a response.
      * @param {"*"|MethodPath|Array<MethodPath>} urls - URL patterns to match
-     * @param {Handler<Context & XContext & { error: Error }>|Pipeline<Context & XContext & { error: Error }>} pipeline - Handler(s) to execute
+     * @param {Handler<Context & XContext & CTXError>|Pipeline<Context & XContext & CTXError>} pipeline - Handler(s) to execute
      * @param {HandlerOptions} [options] - Registration options
-     * @returns {Router<Context & XContext & { error: Error }>} The router instance for chaining
+     * @returns {Router<Context & XContext & CTXError>} The router instance for chaining
      * @template XContext
      * @example
      * router.catch("GET /**", (req, ctx) => {
@@ -277,13 +275,7 @@ export declare class Router<Context extends RouterContext = RouterContext> {
      *   return json({ error: "Internal server error" }, { status: 500 });
      * });
      */
-    catch<XContext = {}>(urls: "*" | MethodPath | Array<MethodPath>, pipeline: Handler<Context & XContext & {
-        error: Error;
-    }> | Pipeline<Context & XContext & {
-        error: Error;
-    }>, options?: HandlerOptions): Router<Context & XContext & {
-        error: Error;
-    }>;
+    catch<XContext = {}>(urls: "*" | MethodPath | Array<MethodPath>, pipeline: Handler<Context & XContext & CTXError> | Pipeline<Context & XContext & CTXError>, options?: HandlerOptions): Router<Context & XContext & CTXError>;
     /**
      * Appends routes from another router under a base URL.
      * Useful for mounting sub-routers or organizing routes by prefix.
@@ -304,12 +296,12 @@ export declare class Router<Context extends RouterContext = RouterContext> {
      * Low-level method to register routes of any handler type.
      * @param {HandlerType} handlerType - The type of handler to register
      * @param {"*"|MethodPath|Array<MethodPath>} urls - URL patterns to match
-     * @param {Handler<Context>|Pipeline<Context>} pipeline_ - Handler(s) to execute
+     * @param {Handler<Context>|Pipeline<Context>|Handler<Context&CTXError>|Pipeline<Context&CTXError>} pipeline_ - Handler(s) to execute
      * @param {HandlerOptions} [options] - Registration options
      * @returns {Router<Context>} The router instance for chaining
      * @private
      */
-    setRoutes(handlerType: HandlerType, urls: "*" | MethodPath | Array<MethodPath>, pipeline_: Handler<Context> | Pipeline<Context>, options?: HandlerOptions): Router<Context>;
+    setRoutes(handlerType: HandlerType, urls: "*" | MethodPath | Array<MethodPath>, pipeline_: Handler<Context> | Pipeline<Context> | Handler<Context & CTXError> | Pipeline<Context & CTXError>, options?: HandlerOptions): Router<Context>;
     /**
      * Handles an incoming HTTP request and returns a response.
      * This is the main entry point for request processing.

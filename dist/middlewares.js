@@ -51,10 +51,10 @@ const limitRate = (config) => {
             cache.set(key, { tokens: maxTokens, lastRefill: now() });
             return true;
         },
-    }, setXRateLimitHeaders = false, } = config;
+    }, setXRateLimitHeaders = false, endHere = false, } = config;
     const rateLimits = new cache_1.Cache(cacheConfig);
     if (refillInterval) {
-        return (req, ctx) => {
+        return function (req, ctx) {
             var _a;
             const id = key(req, ctx);
             const entry = (_a = rateLimits.get(id)) === null || _a === void 0 ? void 0 : _a.value;
@@ -82,10 +82,12 @@ const limitRate = (config) => {
                 ctx.headers.set("X-RateLimit-Limit", maxTokens.toFixed());
                 ctx.headers.set("X-RateLimit-Remaining", entry.tokens.toFixed());
             }
+            if (endHere)
+                return true;
         };
     }
     else if (refillRate) {
-        return (req, ctx) => {
+        return function (req, ctx) {
             var _a;
             const id = key(req, ctx);
             const entry = (_a = rateLimits.get(id)) === null || _a === void 0 ? void 0 : _a.value;
@@ -105,6 +107,8 @@ const limitRate = (config) => {
                 ctx.headers.set("X-RateLimit-Limit", maxTokens.toFixed());
                 ctx.headers.set("X-RateLimit-Remaining", Math.max(0, entry.tokens).toFixed());
             }
+            if (endHere)
+                return true;
         };
     }
     throw new Error("LIMIT-RATE: `refillInterval` or `refillRate` or both should be set");
@@ -141,10 +145,10 @@ exports.limitRate = limitRate;
  * @throws {Error} If credentials is true with wildcard origin ("*")
  */
 const cors = (config) => {
-    const { origins = "*", methods = ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"], allowedHeaders = ["Content-Type", "Authorization"], exposedHeaders, credentials = false, maxAge = 86400, varyOrigin = false, } = config !== null && config !== void 0 ? config : {};
+    const { origins = "*", methods = ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"], allowedHeaders = ["Content-Type", "Authorization"], exposedHeaders, credentials = false, maxAge = 86400, varyOrigin = false, endHere = false, } = config !== null && config !== void 0 ? config : {};
     const globOrigin = origins === "*" ? "*" : null;
     const originsSet = new Set(typeof origins !== "string" ? origins : origins !== "*" ? [] : [origins]);
-    return (req, ctx) => {
+    return function (req, ctx) {
         const origin = req.headers.get("origin");
         let corsOrigin = null;
         if (!origin) {
@@ -185,6 +189,8 @@ const cors = (config) => {
             }
             return (0, helpers_1.status)(204, null);
         }
+        if (endHere)
+            return true;
     };
 };
 exports.cors = cors;
@@ -214,7 +220,7 @@ exports.cors = cors;
  *   ctxProp: "user" // Store in ctx.user instead of ctx.basicAuth
  * });
  */
-const authBasic = ({ credentials, type = "raw", separator = ":", realm = "Protected", ctxProp = "basicAuth", }) => {
+const authBasic = ({ credentials, type = "raw", separator = ":", realm = "Protected", ctxProp = "basicAuth", endHere = false, }) => {
     return (req, ctx) => {
         const authorization = req.headers.get("authorization");
         ctx.headers.set("WWW-Authenticate", `Basic realm="${realm}", charset="UTF-8"`);
@@ -240,6 +246,8 @@ const authBasic = ({ credentials, type = "raw", separator = ":", realm = "Protec
             username,
             role: user.role,
         };
+        if (endHere)
+            return true;
     };
 };
 exports.authBasic = authBasic;
@@ -275,7 +283,7 @@ exports.authBasic = authBasic;
  *   }
  * });
  */
-const authAPIKey = ({ verify, ctxProp = "apiKeyAuth", }) => {
+const authAPIKey = ({ verify, ctxProp = "apiKeyAuth", endHere = false, }) => {
     return (req, ctx) => {
         const apiKey = req.headers.get("X-API-Key");
         if (!apiKey || !verify(apiKey))
@@ -283,6 +291,8 @@ const authAPIKey = ({ verify, ctxProp = "apiKeyAuth", }) => {
         ctx[ctxProp] = {
             apiKey,
         };
+        if (endHere)
+            return true;
     };
 };
 exports.authAPIKey = authAPIKey;
@@ -334,7 +344,7 @@ exports.authAPIKey = authAPIKey;
  *   }
  * });
  */
-const authJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", }) => {
+const authJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", endHere = false, }) => {
     return (req, ctx) => {
         var _a;
         const authorization = req.headers.get("authorization");
@@ -353,6 +363,8 @@ const authJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", }) => {
             token,
             payload: result.payload,
         };
+        if (endHere)
+            return true;
     };
 };
 exports.authJWT = authJWT;

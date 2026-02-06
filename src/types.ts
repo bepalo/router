@@ -1,3 +1,5 @@
+import Router, { RouterContext } from "./router";
+
 /**
  * Standard HTTP methods supported by the router.
  * These methods correspond to HTTP/1.1 request methods.
@@ -97,6 +99,18 @@ export type HandlerResponse =
   | boolean
   | Promise<Response | void | boolean>;
 
+export interface BoundHandler<XContext = {}> {
+  (
+    this: Router<XContext>,
+    req: Request,
+    ctx: RouterContext<XContext>,
+  ): HandlerResponse;
+}
+
+export interface NonBoundHandler<XContext = {}> {
+  (req: Request, ctx: RouterContext<XContext>): HandlerResponse;
+}
+
 /**
  * Generic handler function type.
  * Represents a function that processes HTTP requests.
@@ -124,7 +138,9 @@ export type HandlerResponse =
  *   // Return nothing to continue to next handler
  * };
  */
-export type Handler<Context> = (req: Request, ctx: Context) => HandlerResponse;
+export type Handler<XContext = {}> =
+  | NonBoundHandler<XContext>
+  | BoundHandler<XContext>;
 
 /**
  * Array of handler functions executed in sequence.
@@ -146,7 +162,7 @@ export type Handler<Context> = (req: Request, ctx: Context) => HandlerResponse;
  * // Register pipeline with router
  * router.handle("GET /users", userPipeline);
  */
-export type Pipeline<Context> = Array<Handler<Context>>;
+export type Pipeline<Context = {}> = Array<Handler<Context>>;
 
 /**
  * HTTP header tuple.

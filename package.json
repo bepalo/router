@@ -1,6 +1,6 @@
 {
   "name": "@bepalo/router",
-  "version": "1.1.12",
+  "version": "1.2.13",
   "description": "A fast and feature-rich router for JavaScript runtimes.",
   "author": "Natnael Eshetu",
   "license": "MIT",
@@ -25,7 +25,7 @@
     "build:esm": "tsc --project tsconfig.esm.json",
     "build:cjs": "tsc --project tsconfig.cjs.json",
     "build": "pnpm run build:esm && pnpm run build:cjs",
-    "build:watch": "tsc --watch --project tsconfig.esm.json & tsc --watch --project tsconfig.cjs.json",
+    "build:watch": "tsc --watch --project tsconfig.esm.json && tsc --watch --project tsconfig.cjs.json",
     "prepare": "pnpm run build",
     "test": "vitest --reporter=dot",
     "test:ci": "vitest run --reporter=vitest-markdown-reporter --outputFile=test-result.md"

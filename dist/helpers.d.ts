@@ -1,12 +1,14 @@
+import { RouterContext } from "./router";
 import { Handler } from "./types";
 export * from "./upload-stream";
-type SURecord = Record<string, unknown>;
-type SSRecord = Record<string, string>;
 export interface SocketAddress {
     address: string;
     family: string;
     port: number;
 }
+export type CTXError = {
+    error: Error;
+};
 export type CTXAddress = {
     address: SocketAddress;
 };
@@ -24,6 +26,24 @@ export declare function getHttpStatusText(code: number): string;
  * status(204, null); // No content response
  */
 export declare const status: (status: number, content?: string | null, init?: ResponseInit) => Response;
+/**
+ * Creates a redirect Response.
+ * Defaults to 302 Found unless another status is provided.
+ * @param {string} location - The URL to redirect to
+ * @param {number} [code=302] - The HTTP status code (301, 302, 303, 307, 308)
+ * @param {ResponseInit} [init] - Additional response initialization options
+ * @returns {Response} A Response object with Location header
+ */
+export declare const redirect: (location: string, init?: ResponseInit) => Response;
+/**
+ * Forwards the request to another handler internally.
+ * Does not change the URL or send a redirect to the client.
+ * @param {string} path - The new path to forward to
+ * @returns {Response} A Response object with the forwarded request's response
+ */
+export declare const forward: <XContext = {}>(path: string, options?: {
+    method: string;
+}) => Handler<RouterContext<XContext>>;
 /**
  * Creates a text/plain Response.
  * Defaults to status 200 and text/plain content-type if not specified.
@@ -177,10 +197,10 @@ export declare const parseCookieFromRequest: <Expected extends Record<string, st
 /**
  * Context object containing parsed cookies.
  * @typedef {Object} CTXCookie
- * @property {SSRecord} cookie - Parsed cookies from the request
+ * @property {Record<string, string>} cookie - Parsed cookies from the request
  */
 export type CTXCookie = {
-    cookie: SSRecord;
+    cookie: Record<string, string>;
 };
 /**
  * Creates middleware that parses cookies from the request and adds them to the context.
@@ -193,10 +213,10 @@ export declare const parseCookie: <Context extends CTXCookie>() => Handler<Conte
 /**
  * Context object containing parsed request body.
  * @typedef {Object} CTXBody
- * @property {SURecord} body - Parsed request body data
+ * @property {Record<string, unknown>} body - Parsed request body data
  */
 export type CTXBody = {
-    body: SURecord;
+    body: Record<string, unknown>;
 };
 /**
  * Supported media types for request body parsing.

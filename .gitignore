@@ -1,3 +1,7 @@
+# development
+.sandbox
+.dump
+
 # Logs
 logs
 *.log
@@ -137,6 +141,3 @@ out
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-
-# custom
-.dump

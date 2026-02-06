@@ -23,7 +23,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.respondWithCatcher = exports.respondWith = exports.parseBody = exports.parseCookie = exports.parseCookieFromRequest = exports.clearCookie = exports.setCookie = exports.send = exports.usp = exports.formData = exports.octetStream = exports.blob = exports.json = exports.html = exports.text = exports.status = void 0;
+exports.respondWithCatcher = exports.respondWith = exports.parseBody = exports.parseCookie = exports.parseCookieFromRequest = exports.clearCookie = exports.setCookie = exports.send = exports.usp = exports.formData = exports.octetStream = exports.blob = exports.json = exports.html = exports.text = exports.forward = exports.redirect = exports.status = void 0;
 exports.getHttpStatusText = getHttpStatusText;
 __exportStar(require("./upload-stream"), exports);
 function getHttpStatusText(code) {
@@ -213,14 +213,52 @@ const status = (status, content, init) => {
     var _a;
     const statusText = (_a = init === null || init === void 0 ? void 0 : init.statusText) !== null && _a !== void 0 ? _a : getHttpStatusText(status);
     const headers = new Headers(init === null || init === void 0 ? void 0 : init.headers);
-    if (!headers.has("content-type")) {
+    if (content !== null && !headers.has("content-type")) {
         headers.set("content-type", "text/plain");
     }
-    return new Response(content !== undefined ? content : statusText, Object.assign({ status,
-        statusText,
-        headers }, init));
+    return new Response(content !== undefined ? content : statusText, Object.assign(Object.assign({ statusText }, init), { status,
+        headers }));
 };
 exports.status = status;
+/**
+ * Creates a redirect Response.
+ * Defaults to 302 Found unless another status is provided.
+ * @param {string} location - The URL to redirect to
+ * @param {number} [code=302] - The HTTP status code (301, 302, 303, 307, 308)
+ * @param {ResponseInit} [init] - Additional response initialization options
+ * @returns {Response} A Response object with Location header
+ */
+const redirect = (location, init) => {
+    var _a, _b;
+    const status = (_a = init === null || init === void 0 ? void 0 : init.status) !== null && _a !== void 0 ? _a : 302;
+    const statusText = (_b = init === null || init === void 0 ? void 0 : init.statusText) !== null && _b !== void 0 ? _b : getHttpStatusText(status);
+    const headers = new Headers(init === null || init === void 0 ? void 0 : init.headers);
+    headers.set("Location", location);
+    return new Response(null, Object.assign(Object.assign({ statusText }, init), { status,
+        headers }));
+};
+exports.redirect = redirect;
+/**
+ * Forwards the request to another handler internally.
+ * Does not change the URL or send a redirect to the client.
+ * @param {string} path - The new path to forward to
+ * @returns {Response} A Response object with the forwarded request's response
+ */
+const forward = (path) => {
+    return function (req, ctx) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const url = new URL(req.url);
+            url.pathname = path;
+            const newReq = new Request(url.toString(), {
+                method: req.method,
+                headers: req.headers,
+                body: req.body ? req.clone().body : undefined,
+            });
+            return this.respond(newReq, ctx);
+        });
+    };
+};
+exports.forward = forward;
 /**
  * Creates a text/plain Response.
  * Defaults to status 200 and text/plain content-type if not specified.
@@ -239,9 +277,8 @@ const text = (content, init) => {
     if (!headers.has("content-type")) {
         headers.set("content-type", "text/plain");
     }
-    return new Response(content, Object.assign({ status,
-        statusText,
-        headers }, init));
+    return new Response(content, Object.assign(Object.assign({ statusText }, init), { status,
+        headers }));
 };
 exports.text = text;
 /**
@@ -262,9 +299,8 @@ const html = (content, init) => {
     if (!headers.has("content-type")) {
         headers.set("content-type", "text/html");
     }
-    return new Response(content, Object.assign({ status,
-        statusText,
-        headers }, init));
+    return new Response(content, Object.assign(Object.assign({ statusText }, init), { status,
+        headers }));
 };
 exports.html = html;
 /**
@@ -286,9 +322,8 @@ const json = (body, init) => {
     if (!headers.has("content-type")) {
         headers.set("content-type", "application/json");
     }
-    return Response.json(body, Object.assign({ status,
-        statusText,
-        headers }, init));
+    return Response.json(body, Object.assign(Object.assign({ statusText }, init), { status,
+        headers }));
 };
 exports.json = json;
 /**
@@ -311,9 +346,8 @@ const blob = (blob, init) => {
         headers.set("content-type", blob.type || "application/octet-stream");
     }
     headers.set("content-length", blob.size.toFixed());
-    return new Response(blob, Object.assign({ status,
-        statusText,
-        headers }, init));
+    return new Response(blob, Object.assign(Object.assign({ statusText }, init), { status,
+        headers }));
 };
 exports.blob = blob;
 /**
@@ -338,9 +372,8 @@ const octetStream = (octet, init) => {
     if (!(octet instanceof ReadableStream)) {
         headers.set("content-length", (octet instanceof Blob ? octet.size : octet.byteLength).toFixed());
     }
-    return new Response(octet, Object.assign({ status,
-        statusText,
-        headers }, init));
+    return new Response(octet, Object.assign(Object.assign({ statusText }, init), { status,
+        headers }));
 };
 exports.octetStream = octetStream;
 /**
@@ -357,8 +390,7 @@ const formData = (formData, init) => {
     var _a, _b;
     const status = (_a = init === null || init === void 0 ? void 0 : init.status) !== null && _a !== void 0 ? _a : 200;
     const statusText = (_b = init === null || init === void 0 ? void 0 : init.statusText) !== null && _b !== void 0 ? _b : getHttpStatusText(status);
-    return new Response(formData, Object.assign({ status,
-        statusText }, init));
+    return new Response(formData, Object.assign(Object.assign({ statusText }, init), { status }));
 };
 exports.formData = formData;
 /**
@@ -378,9 +410,8 @@ const usp = (usp, init) => {
     if (!headers.has("content-type")) {
         headers.set("content-type", "application/x-www-form-urlencoded");
     }
-    return new Response(usp, Object.assign({ status,
-        statusText,
-        headers }, init));
+    return new Response(usp, Object.assign(Object.assign({ statusText }, init), { status,
+        headers }));
 };
 exports.usp = usp;
 /**
@@ -419,17 +450,15 @@ const send = (body, init) => {
         }
         else if (!(body instanceof ReadableStream)) {
             headers.set("content-type", "application/json");
-            return Response.json(body, Object.assign({ status,
-                statusText,
-                headers }, init));
+            return Response.json(body, Object.assign(Object.assign({ status,
+                statusText }, init), { headers }));
         }
         else {
             headers.set("content-type", "application/octet-stream");
         }
     }
-    return new Response(body, Object.assign({ status,
-        statusText,
-        headers }, init));
+    return new Response(body, Object.assign(Object.assign({ statusText }, init), { status,
+        headers }));
 };
 exports.send = send;
 /**
@@ -591,7 +620,8 @@ const parseBody = (options) => {
                 }
                 case "application/json": {
                     const body = yield req.json();
-                    ctx.body = typeof body === "object" ? body : {};
+                    ctx.body =
+                        typeof body === "object" ? body : {};
                     break;
                 }
                 case "text/plain": {

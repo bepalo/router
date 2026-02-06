@@ -40,7 +40,7 @@ import { JWT, JwtPayload, JwtVerifyOptions } from "@bepalo/jwt";
  *
  * @throws {Error} If neither refillInterval nor refillRate is provided
  */
-export declare const limitRate: <Context extends RouterContext & CTXAddress>(config: {
+export declare const limitRate: <XContext = {}, Context extends RouterContext<XContext & CTXAddress> = RouterContext<XContext & CTXAddress>>(config: {
     key: (req: Request, ctx: Context) => string;
     refillInterval?: number;
     refillRate?: number;
@@ -49,6 +49,7 @@ export declare const limitRate: <Context extends RouterContext & CTXAddress>(con
     now?: () => number;
     cacheConfig?: CacheConfig<string, any>;
     setXRateLimitHeaders?: boolean;
+    endHere?: boolean;
 }) => Handler<Context>;
 /**
  * Creates a CORS (Cross-Origin Resource Sharing) middleware.
@@ -80,7 +81,7 @@ export declare const limitRate: <Context extends RouterContext & CTXAddress>(con
  *
  * @throws {Error} If credentials is true with wildcard origin ("*")
  */
-export declare const cors: <Context extends RouterContext>(config?: {
+export declare const cors: <XContext = {}, Context extends RouterContext<XContext> = RouterContext<XContext>>(config?: {
     origins: "*" | string | string[];
     methods?: HttpMethod[] | null;
     allowedHeaders?: string[] | null;
@@ -88,18 +89,19 @@ export declare const cors: <Context extends RouterContext>(config?: {
     credentials?: boolean | null;
     maxAge?: number | null;
     varyOrigin?: boolean;
+    endHere?: boolean;
 }) => Handler<Context>;
 /**
  * Context type for Basic Authentication middleware.
  * @template {string} [prop="basicAuth"] - Property name to store auth data in context
  * @typedef {RouterContext & {[K in prop]?: {username: string; role: string} & Record<string, any>}} CTXBasicAuth
  */
-export type CTXBasicAuth<prop extends string = "basicAuth"> = RouterContext & {
+export type CTXBasicAuth<prop extends string = "basicAuth"> = RouterContext<{
     [K in prop]?: {
         username: string;
         role: string;
     } & Record<string, any>;
-};
+}>;
 /**
  * Creates a Basic Authentication middleware.
  * Supports RFC 7617 Basic Authentication scheme.
@@ -126,25 +128,26 @@ export type CTXBasicAuth<prop extends string = "basicAuth"> = RouterContext & {
  *   ctxProp: "user" // Store in ctx.user instead of ctx.basicAuth
  * });
  */
-export declare const authBasic: <Context extends CTXBasicAuth, prop extends string = "basicAuth">({ credentials, type, separator, realm, ctxProp, }: {
+export declare const authBasic: <Context extends CTXBasicAuth, prop extends string = "basicAuth">({ credentials, type, separator, realm, ctxProp, endHere, }: {
     credentials: Map<string, {
-        pass: string;
+        password: string;
     } & Record<string, any>>;
     type?: "raw" | "base64";
     separator?: ":" | " ";
     realm?: string;
     ctxProp?: prop;
+    endHere?: boolean;
 }) => Handler<Context>;
 /**
  * Context type for API Key Authentication middleware.
  * @template {string} [prop="apiKeyAuth"] - Property name to store auth data in context
  * @typedef {RouterContext & {[K in prop]?: {apiKey: string} & Record<string, any>}} CTXAPIKeyAuth
  */
-export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext & {
+export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext<{
     [K in prop]?: {
         apiKey: string;
     } & Record<string, any>;
-};
+}>;
 /**
  * Creates an API Key Authentication middleware.
  * Validates API keys from X-API-Key header.
@@ -177,9 +180,10 @@ export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext & 
  *   }
  * });
  */
-export declare const authAPIKey: <Context extends CTXAPIKeyAuth, prop extends string = "apiKeyAuth">({ verify, ctxProp, }: {
+export declare const authAPIKey: <Context extends CTXAPIKeyAuth, prop extends string = "apiKeyAuth">({ verify, ctxProp, endHere, }: {
     verify: (apiKey: string) => boolean;
     ctxProp?: prop;
+    endHere?: boolean;
 }) => Handler<Context>;
 /**
  * Context type for JWT Authentication middleware.
@@ -187,13 +191,13 @@ export declare const authAPIKey: <Context extends CTXAPIKeyAuth, prop extends st
  * @template {string} [prop="jwtAuth"] - Property name to store auth data in context
  * @typedef {RouterContext & {[K in prop]?: {jwt: JWT<Payload>; token: string; payload: Payload} & Record<string, any>}} CTXJWTAuth
  */
-export type CTXJWTAuth<Payload extends JwtPayload<{}>, prop extends string = "jwtAuth"> = RouterContext & {
+export type CTXJWTAuth<Payload extends JwtPayload<{}>, prop extends string = "jwtAuth"> = RouterContext<{
     [K in prop]?: {
         jwt: JWT<Payload>;
         token: string;
         payload: Payload;
     } & Record<string, any>;
-};
+}>;
 /**
  * Creates a JWT (JSON Web Token) Authentication middleware.
  * Validates Bearer tokens from Authorization header.
@@ -242,10 +246,11 @@ export type CTXJWTAuth<Payload extends JwtPayload<{}>, prop extends string = "jw
  *   }
  * });
  */
-export declare const authJWT: <Payload extends JwtPayload<{}>, Context extends CTXJWTAuth<Payload, prop>, prop extends string = "jwtAuth">({ jwt, validate, verifyOptions, ctxProp, }: {
+export declare const authJWT: <Payload extends JwtPayload<{}>, Context extends CTXJWTAuth<Payload, prop>, prop extends string = "jwtAuth">({ jwt, validate, verifyOptions, ctxProp, endHere, }: {
     jwt: JWT<Payload>;
     validate?: (payload: Payload) => boolean;
     verifyOptions?: JwtVerifyOptions;
     ctxProp?: prop;
+    endHere?: boolean;
 }) => Handler<Context>;
 //# sourceMappingURL=middlewares.d.ts.map

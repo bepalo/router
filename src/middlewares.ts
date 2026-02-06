@@ -1,5 +1,5 @@
 import { CTXAddress, status } from "./helpers";
-import { RouterContext } from "./router";
+import Router, { RouterContext } from "./router";
 import { Handler, HttpMethod } from "./types";
 import { Cache, CacheConfig } from "@bepalo/cache";
 import { JWT, JwtPayload, JwtVerifyOptions } from "@bepalo/jwt";
@@ -42,7 +42,12 @@ import { Time } from "@bepalo/time";
  *
  * @throws {Error} If neither refillInterval nor refillRate is provided
  */
-export const limitRate = <Context extends RouterContext & CTXAddress>(config: {
+export const limitRate = <
+  XContext = {},
+  Context extends RouterContext<XContext & CTXAddress> = RouterContext<
+    XContext & CTXAddress
+  >,
+>(config: {
   key: (req: Request, ctx: Context) => string;
   refillInterval?: number;
   refillRate?: number;
@@ -51,6 +56,7 @@ export const limitRate = <Context extends RouterContext & CTXAddress>(config: {
   now?: () => number;
   cacheConfig?: CacheConfig<string, any>;
   setXRateLimitHeaders?: boolean;
+  endHere?: boolean;
 }): Handler<Context> => {
   const {
     key,
@@ -70,6 +76,7 @@ export const limitRate = <Context extends RouterContext & CTXAddress>(config: {
       },
     },
     setXRateLimitHeaders = false,
+    endHere = false,
   } = config;
   type CacheEntry = {
     tokens: number;
@@ -77,7 +84,7 @@ export const limitRate = <Context extends RouterContext & CTXAddress>(config: {
   };
   const rateLimits: Cache<string, CacheEntry> = new Cache(cacheConfig);
   if (refillInterval) {
-    return (req: Request, ctx: Context) => {
+    return function (req: Request, ctx: Context) {
       const id = key(req, ctx);
       const entry = rateLimits.get(id)?.value as CacheEntry;
       const timeElapsed = now() - entry.lastRefill;
@@ -108,9 +115,10 @@ export const limitRate = <Context extends RouterContext & CTXAddress>(config: {
         ctx.headers.set("X-RateLimit-Limit", maxTokens.toFixed());
         ctx.headers.set("X-RateLimit-Remaining", entry.tokens.toFixed());
       }
+      if (endHere) return true;
     };
   } else if (refillRate) {
-    return (req: Request, ctx: Context) => {
+    return function (req: Request, ctx: Context) {
       const id = key(req, ctx);
       const entry = rateLimits.get(id)?.value as CacheEntry;
       const timeElapsed = now() - entry.lastRefill;
@@ -132,6 +140,7 @@ export const limitRate = <Context extends RouterContext & CTXAddress>(config: {
           Math.max(0, entry.tokens).toFixed(),
         );
       }
+      if (endHere) return true;
     };
   }
   throw new Error(
@@ -169,7 +178,10 @@ export const limitRate = <Context extends RouterContext & CTXAddress>(config: {
  *
  * @throws {Error} If credentials is true with wildcard origin ("*")
  */
-export const cors = <Context extends RouterContext>(config?: {
+export const cors = <
+  XContext = {},
+  Context extends RouterContext<XContext> = RouterContext<XContext>,
+>(config?: {
   origins: "*" | string | string[];
   methods?: HttpMethod[] | null;
   allowedHeaders?: string[] | null;
@@ -177,6 +189,7 @@ export const cors = <Context extends RouterContext>(config?: {
   credentials?: boolean | null;
   maxAge?: number | null;
   varyOrigin?: boolean;
+  endHere?: boolean;
 }): Handler<Context> => {
   const {
     origins = "*",
@@ -186,12 +199,13 @@ export const cors = <Context extends RouterContext>(config?: {
     credentials = false,
     maxAge = 86400,
     varyOrigin = false,
+    endHere = false,
   } = config ?? {};
   const globOrigin = origins === "*" ? "*" : null;
   const originsSet = new Set(
     typeof origins !== "string" ? origins : origins !== "*" ? [] : [origins],
   );
-  return (req: Request, ctx: Context) => {
+  return function (req: Request, ctx: Context) {
     const origin = req.headers.get("origin");
     let corsOrigin: string | null = null;
     if (!origin) {
@@ -236,6 +250,7 @@ export const cors = <Context extends RouterContext>(config?: {
       }
       return status(204, null);
     }
+    if (endHere) return true;
   };
 };
 
@@ -244,12 +259,12 @@ export const cors = <Context extends RouterContext>(config?: {
  * @template {string} [prop="basicAuth"] - Property name to store auth data in context
  * @typedef {RouterContext & {[K in prop]?: {username: string; role: string} & Record<string, any>}} CTXBasicAuth
  */
-export type CTXBasicAuth<prop extends string = "basicAuth"> = RouterContext & {
+export type CTXBasicAuth<prop extends string = "basicAuth"> = RouterContext<{
   [K in prop]?: {
     username: string;
     role: string;
   } & Record<string, any>;
-};
+}>;
 
 /**
  * Creates a Basic Authentication middleware.
@@ -286,12 +301,14 @@ export const authBasic = <
   separator = ":",
   realm = "Protected",
   ctxProp = "basicAuth" as prop,
+  endHere = false,
 }: {
-  credentials: Map<string, { pass: string } & Record<string, any>>;
+  credentials: Map<string, { password: string } & Record<string, any>>;
   type?: "raw" | "base64";
   separator?: ":" | " ";
   realm?: string;
   ctxProp?: prop;
+  endHere?: boolean;
 }): Handler<Context> => {
   return (req: Request, ctx: Context) => {
     const authorization = req.headers.get("authorization");
@@ -316,6 +333,7 @@ export const authBasic = <
       username,
       role: user.role,
     };
+    if (endHere) return true;
   };
 };
 
@@ -324,12 +342,11 @@ export const authBasic = <
  * @template {string} [prop="apiKeyAuth"] - Property name to store auth data in context
  * @typedef {RouterContext & {[K in prop]?: {apiKey: string} & Record<string, any>}} CTXAPIKeyAuth
  */
-export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> =
-  RouterContext & {
-    [K in prop]?: {
-      apiKey: string;
-    } & Record<string, any>;
-  };
+export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext<{
+  [K in prop]?: {
+    apiKey: string;
+  } & Record<string, any>;
+}>;
 
 /**
  * Creates an API Key Authentication middleware.
@@ -369,9 +386,11 @@ export const authAPIKey = <
 >({
   verify,
   ctxProp = "apiKeyAuth" as prop,
+  endHere = false,
 }: {
   verify: (apiKey: string) => boolean;
   ctxProp?: prop;
+  endHere?: boolean;
 }): Handler<Context> => {
   return (req: Request, ctx: Context) => {
     const apiKey = req.headers.get("X-API-Key");
@@ -379,6 +398,7 @@ export const authAPIKey = <
     (ctx as { [K in prop]: any })[ctxProp] = {
       apiKey,
     };
+    if (endHere) return true;
   };
 };
 
@@ -391,13 +411,13 @@ export const authAPIKey = <
 export type CTXJWTAuth<
   Payload extends JwtPayload<{}>,
   prop extends string = "jwtAuth",
-> = RouterContext & {
+> = RouterContext<{
   [K in prop]?: {
     jwt: JWT<Payload>;
     token: string;
     payload: Payload;
   } & Record<string, any>;
-};
+}>;
 
 /**
  * Creates a JWT (JSON Web Token) Authentication middleware.
@@ -456,11 +476,13 @@ export const authJWT = <
   validate,
   verifyOptions,
   ctxProp = "jwtAuth" as prop,
+  endHere = false,
 }: {
   jwt: JWT<Payload>;
   validate?: (payload: Payload) => boolean;
   verifyOptions?: JwtVerifyOptions;
   ctxProp?: prop;
+  endHere?: boolean;
 }): Handler<Context> => {
   return (req: Request, ctx: Context) => {
     const authorization = req.headers.get("authorization");
@@ -475,5 +497,6 @@ export const authJWT = <
       token,
       payload: result.payload,
     };
+    if (endHere) return true;
   };
 };
