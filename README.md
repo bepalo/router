@@ -8,7 +8,43 @@
 
 [![Vitest](https://img.shields.io/badge/vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](test-result.md)
 
-**A fast, feature-rich HTTP router for modern JavaScript runtimes.**
+**A fast, feature-rich HTTP router for modern JavaScript runtimes.** [jump to example](#example)
+
+## 📑 Table of Contents
+
+1. [🏆 @bepalo/router](#-bepalorouter)
+2. [✨ Features](#-features)
+3. [🚀 Get Started](#-get-started)
+   - [📥 Installation](#-installation)
+   - [📦 Basic Usage](#-basic-usage)
+   - [Example](#example)
+   - [Serve with client address](#serve-with-client-address)
+     - [Bun](#bun)
+     - [Deno](#deno)
+     - [Nodejs](#nodejs)
+4. [📚 Core Concepts](#-core-concepts)
+   - [Handler Types & Execution Order](#handler-types--execution-order)
+   - [Router Context](#router-context)
+5. [📖 API Reference](#-api-reference)
+   - [Router Class](#router-class)
+     - [Constructor](#constructor)
+     - [Configuration Options](#configuration-options)
+     - [Handler Registration Methods](#handler-registration-methods)
+     - [Handler Options](#handler-options)
+     - [Router Composition](#router-composition)
+     - [Request Processing](#request-processing)
+     - [Helper Functions](#helper-functions)
+     - [Provided Middleware](#provided-middleware)
+   - [🔧 Advanced Usage](#-advanced-usage)
+     - [Pipeline (Multiple Handlers)](#pipeline-multiple-handlers)
+     - [Path Patterns](#path-patterns)
+     - [Route Priority](#route-priority)
+     - [Router Composition Example](#router-composition-example)
+6. [🎯 Performance](#-performance)
+   - [Comparison with Other Routers](#comparison-with-other-routers)
+7. [📄 License](#-license)
+8. [🕊️ Thanks and Enjoy](#-thanks-and-enjoy)
+9. [💖 Be a Sponsor](#-be-a-sponsor)
 
 ## ✨ Features
 
@@ -107,7 +143,177 @@ Deno.serve(
 console.log("Server running at http://localhost:3000");
 ```
 
+### Example
+
+```js
+import {
+  Router,
+  status,
+  html,
+  json,
+  cors,
+  limitRate,
+  parseBody,
+  type CTXBody,
+  type CTXAddress,
+  type SocketAddress,
+} from "@bepalo/router";
+import { z } from "zod";
+
+const router = new Router<CTXAddress>({
+  // Default headers can accept static headers or dynamic headers
+  //   as a function like this
+  defaultHeaders: () => [
+    ["X-Powered-By", "@bepalo/router"],
+    ["Date", new Date().toUTCString()],
+  ],
+  // Errors are caught by defualt but not logged
+  defaultCatcher: (req, ctx) => {
+    console.error("Error:", ctx.error);
+    return json({ error: "Something went wrong" }, { status: 500 });
+  },
+  // For crude optimizations
+  enable: {
+    hooks: false,
+    afters: false,
+    filters: true,
+    fallbacks: true,
+    catchers: true,
+  },
+  ///...
+});
+
+// Global CORS
+router.filter("GET /.**", [
+  limitRate({
+    key: (req, ctx) => ctx.address.address, // used to identify client
+    maxTokens: 30,
+    refillRate: 3, // 3 tokens every second
+    setXRateLimitHeaders: true,
+  }),
+  cors({
+    origins: "*",
+    methods: ["GET"],
+  }),
+]);
+
+// Rate limiting for API
+router.filter(
+  [
+    "GET /api/.**",
+    "POST /api/.**",
+    "PUT /api/.**",
+    "PATCH /api/.**",
+    "DELETE /api/.**",
+  ],
+  [
+    limitRate({
+      key: (req, ctx) => ctx.address.address, // used to identify client
+      maxTokens: 100,
+      refillInterval: 30_000, // every 30 seconds
+      refillRate: 50, // 50 tokens every refillInterval
+      setXRateLimitHeaders: true,
+    }),
+    cors({
+      origins: ["http://localhost:3000", "https://example.com"],
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true,
+      endHere: true,
+    }),
+  ],
+);
+
+// Main route
+router.handle("GET /", () =>
+  html("<h1>Welcome! Enjoy using @beplao/router</h1>"),
+);
+router.handle("GET /status", () => status(200));
+
+// Sample sub-route `/api/user`
+////////////////////////////////////////
+// eg. inside routes/api/user.ts
+const userRepo = new Map();
+const userAPI = new Router();
+let topId = 1000;
+
+const postUserBodySchema = z.object({
+  name: z.string(),
+  password: z.string().min(4),
+});
+
+userAPI.filter<CTXBody>("POST /", [
+  parseBody(),
+  (req, { body }) => {
+    const { success, error } = postUserBodySchema.safeParse(body);
+    const errors = error?.issues ?? [];
+    if (!success) return json({ errors }, { status: 400 });
+  },
+]);
+userAPI.handle<CTXBody>("POST /", [
+  (req, { body }) => {
+    const id = topId++;
+    const { name, password } = body;
+    const user = { id, name, password };
+    userRepo.set(id, user);
+    return json({ success: true, id }, { status: 201 });
+  },
+]);
+
+userAPI.handle("GET /", () =>
+  json({ users: Object.fromEntries(userRepo.entries()) }),
+);
+
+userAPI.handle("GET /:userId", (req, { params }) => {
+  const { userId } = params;
+  const user = userRepo.get(parseInt(userId));
+  if (!user) return json({ error: "User not found" }, { status: 404 });
+  return json({ user });
+});
+
+////////////////////////////////////////
+
+router.append("/api/user", userAPI);
+
+// fallback handling
+router.fallback("GET /api/.**", () =>
+  json({ error: "Not found" }, { status: 404 }),
+);
+
+// Error handling
+router.catch(
+  [
+    "GET /api/.**",
+    "POST /api/.**",
+    "PUT /api/.**",
+    "PATCH /api/.**",
+    "DELETE /api/.**",
+  ],
+  [
+    (req, ctx) => {
+      console.error("APIError:", ctx.error);
+      return json({ error: "Something went wrong" }, { status: 500 });
+    },
+  ],
+);
+
+// Start server
+Bun.serve({
+  port: 3000,
+  async fetch(req, server) {
+    const address = server.requestIP(req) as SocketAddress | null;
+    if (!address) throw new Error("null client address");
+    /// best to log request and response here...
+    return await router.respond(req, { address });
+  },
+});
+
+console.log("Server listening on http://localhost:3000");
+```
+
 ### Serve with client address
+
+#### Bun
 
 ```js
 // Bun example
@@ -119,7 +325,11 @@ Bun.serve({
   },
 });
 console.log("Server running at http://localhost:3000");
+```
 
+#### Deno
+
+```js
 // Deno example
 Deno.serve(
   {
@@ -136,52 +346,57 @@ Deno.serve(
   },
   // router.respond.bind(router),
 );
+```
 
+#### Nodejs
+
+```js
 // Nodejs example. very slow
-http.createServer(async (req, res) => {
-  const url = new URL(req.url || "/", `http://${req.headers.host}`);
+http
+  .createServer(async (req, res) => {
+    const url = new URL(req.url || "/", `http://${req.headers.host}`);
 
-  // Build fetch request
-  const headers = new Headers();
-  Object.entries(req.headers).forEach(
-    ([k, v]) => v && headers.set(k, v.toString()),
-  );
-
-  const request = new Request(url, {
-    method: req.method,
-    headers,
-    body: ["GET", "HEAD"].includes(req.method) ? undefined : req,
-    duplex: "half",
-  });
-
-  const address = {
-    family: req.socket.remoteFamily,
-    address: req.socket.remoteAddress,
-    port: req.socket.remotePort,
-  };
-  try {
-    const response = await router.respond(request, { address });
-
-    res.writeHead(
-      response.status,
-      response.statusText,
-      Object.fromEntries(response.headers.entries()),
+    // Build fetch request
+    const headers = new Headers();
+    Object.entries(req.headers).forEach(
+      ([k, v]) => v && headers.set(k, v.toString()),
     );
-    if (response.body) {
-      const reader = response.body.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
-      }
-    }
-    res.end();
-  } catch {
-    res.writeHead(500).end();
-  }
-}).on("connection", (socket) => socket.setNoDelay(true))
-  .listen(3000, () => console.log("Server running on port 3000"));
 
+    const request = new Request(url, {
+      method: req.method,
+      headers,
+      body: ["GET", "HEAD"].includes(req.method) ? undefined : req,
+      duplex: "half",
+    });
+
+    const address = {
+      family: req.socket.remoteFamily,
+      address: req.socket.remoteAddress,
+      port: req.socket.remotePort,
+    };
+    try {
+      const response = await router.respond(request, { address });
+
+      res.writeHead(
+        response.status,
+        response.statusText,
+        Object.fromEntries(response.headers.entries()),
+      );
+      if (response.body) {
+        const reader = response.body.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(value);
+        }
+      }
+      res.end();
+    } catch {
+      res.writeHead(500).end();
+    }
+  })
+  .on("connection", (socket) => socket.setNoDelay(true))
+  .listen(3000, () => console.log("Server running on port 3000"));
 ```
 
 ## 📚 Core Concepts
@@ -327,6 +542,8 @@ router.respond(
 ```ts
 import {
   status, // HTTP status response
+  redirect, // Redirect response with location header set
+  forward, // forward to other path within the router.
   text, // Plain text response
   html, // HTML response
   json, // JSON response
@@ -498,129 +715,40 @@ Routes are matched in this order of priority:
 ### Router Composition Example
 
 ```js
-const apiRouter = new Router();
-
-// API routes
-apiRouter.handle("GET /users", () => json({ users: [] }));
-apiRouter.handle("POST /users", async (req) => {
-  const body = await req.json();
-  return json({ created: true, data: body }, { status: 201 });
-});
-
-// Nested router
-const v1Router = new Router();
-v1Router.handle("GET /status", () => json({ version: "1.0", status: "ok" }));
-apiRouter.append("/v1", v1Router);
-
-// Mount API router under /api
-const mainRouter = new Router();
-mainRouter.append("/api", apiRouter);
-
-// Add some frontend routes
-mainRouter.handle("GET /", () => html("<h1>Home</h1>"));
-mainRouter.handle("GET /about", () => html("<h1>About</h1>"));
-```
-
-### Complete Example with Middleware
-
-```js
-import {
-  Router,
-  text,
-  json,
-  cors,
-  limitRate,
-  type CTXAddress,
-  type SocketAddress,
-  type RouterContext,
-} from "@bepalo/router";
-
-const router = new Router<RouterContext & CTXAddress>({
-  defaultHeaders: () => [
-    ["X-Powered-By", "@bepalo/router"],
-    ["Date", new Date().toUTCString()]
-  ],
-});
-
-// Global CORS
-router.filter("*", [
-  cors({
-    origins: ["http://localhost:3000", "https://example.com"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  }),
-]);
-
-// Rate limiting for API
-router.filter(
+// User API routes
+const userAPIRouter = new Router();
+userAPIRouter.handle("GET /", () => json({ user: {} }));
+userAPIRouter.handle <
+  CTXBody >
+  ("POST /",
   [
-    "GET /api/.**",
-    "POST /api/.**",
-    "PUT /api/.**",
-    "PATCH /api/.**",
-    "DELETE /api/.**",
-  ],
-  [
-    limitRate({
-      key: (req, ctx) => ctx.address.address,
-      maxTokens: 100,
-      refillRate: 10, // 10 tokens per second
-      setXRateLimitHeaders: true,
-    }),
-]);
+    parseBody(),
+    async (req, { body }) => {
+      return json({ success: true, data: body }, { status: 201 });
+    },
+  ]);
 
-// Routes
-router.handle("GET /", () => text("Welcome to the API"));
-
-// users API `/api/users` router
-{
-  const usersAPI = new Router();
-
-  usersAPI.handle("POST /", async (req) => {
-    const body = await req.json();
-    return json({ id: Date.now(), ...body }, { status: 201 });
-  });
-
-  usersAPI.handle("GET /", () =>
-    json({
-      users: [
-        { id: 1, name: "Abebe" },
-        { id: 2, name: "Derartu" },
-      ],
-    }),
-  );
-
-  usersAPI.handle("GET /:id", (req, { params }) =>
-    json({ user: { id: params.id, name: "User " + params.id } }),
-  );
-
-  router.append("/api/users", usersAPI);
-}
-
-// Custom Error handling
-router.catch("*", (req, ctx) => {
-  console.error("Error:", ctx.error);
-  return json({ error: "Internal server error" }, { status: 500 });
-});
-
-// Custom fallback handler
-router.fallback("*", () => json({ error: "Not found" }, { status: 404 }));
-
-// Start server
-Bun.serve({
-  port: 3000,
-  async fetch(req, server) {
-    const address = server.requestIP(req) as SocketAddress | null;
-    if(!address) {
-      throw new Error("null client address");
-    }
-    return await router.respond(req, { address });
+// Session API routes
+const sessionAPIRouter = new Router();
+sessionAPIRouter.handle("GET /", () => json({ session: {} }));
+sessionAPIRouter.handle("POST /", [
+  parseBody(),
+  async (req, { body }) => {
+    return json({ success: true, data: body }, { status: 201 });
   },
-});
+]);
 
-console.log("Server listening on http://localhost:3000");
+// API v1 router
+const v1APIRouter = new Router();
+v1APIRouter.handle("GET /status", () => json({ version: "1.0", status: "ok" }));
 
+// Composition is useful for defining routes in multiple files
+//  and appending them in other routes.
+v1APIRouter.append("/user", userAPIRouter);
+v1APIRouter.append("/session", sessionAPIRouter);
+
+const mainRouter = new Router();
+mainRouter.append("/api/v1", v1APIRouter);
 ```
 
 ## 🎯 Performance
@@ -640,7 +768,7 @@ The router uses a radix tree (trie) data structure for route matching, providing
 | Feature                         | @bepalo/router | Express | Hono | Fastify |
 | ------------------------------- | -------------- | ------- | ---- | ------- |
 | Radix Tree Routing              | ✅             | ❌      | ✅   | ✅      |
-| Zero Dependencies               | ✅             | ❌      | ❌   | ❌      |
+| Few Dependencies                | ✅             | ❌      | ❌   | ❌      |
 | TypeScript Native               | ✅             | ❌      | ✅   | ✅      |
 | Extended Handler Phases         | ✅             | ⚠️      | ⚠️   | ⚠️      |
 | Built-in Middleware             | ✅             | ❌      | ✅   | ✅      |
