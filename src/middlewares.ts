@@ -89,7 +89,6 @@ export const parseBody = <Context extends CTXBody>(options?: {
   const once = options?.once;
   const clone = options?.clone;
   return async (_req: Request, ctx: Context) => {
-    console.log(_req.url, { once, body: ctx.body });
     if (once && ctx.body) return;
     const contentType = _req.headers.get("content-type")?.split(";", 2)[0];
     if (!(contentType && accept.includes(contentType))) {

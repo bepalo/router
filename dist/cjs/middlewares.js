@@ -57,7 +57,6 @@ const parseBody = (options) => {
     const clone = options === null || options === void 0 ? void 0 : options.clone;
     return (_req, ctx) => __awaiter(void 0, void 0, void 0, function* () {
         var _a, _b, _c, _d;
-        console.log(_req.url, { once, body: ctx.body });
         if (once && ctx.body)
             return;
         const contentType = (_a = _req.headers.get("content-type")) === null || _a === void 0 ? void 0 : _a.split(";", 2)[0];
