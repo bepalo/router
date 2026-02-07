@@ -99,17 +99,16 @@ export type HandlerResponse =
   | boolean
   | Promise<Response | void | boolean>;
 
-export interface BoundHandler<XContext = {}> {
-  (
-    this: Router<XContext>,
-    req: Request,
-    ctx: RouterContext<XContext>,
-  ): HandlerResponse;
-}
+export type BoundHandler<XContext = {}> = (
+  this: Router<XContext>,
+  req: Request,
+  ctx: RouterContext<XContext>,
+) => HandlerResponse;
 
-export interface NonBoundHandler<XContext = {}> {
-  (req: Request, ctx: RouterContext<XContext>): HandlerResponse;
-}
+export type NonBoundHandler<XContext = {}> = (
+  req: Request,
+  ctx: RouterContext<XContext>,
+) => HandlerResponse;
 
 /**
  * Generic handler function type.

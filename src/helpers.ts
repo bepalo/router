@@ -1,5 +1,5 @@
 import Router, { RouterContext } from "./router";
-import { Handler, HandlerType, HttpMethod, MethodPath } from "./types";
+import type { BoundHandler, Handler, HttpMethod } from "./types";
 
 export * from "./upload-stream";
 
@@ -238,25 +238,34 @@ export const redirect = (location: string, init?: ResponseInit): Response => {
 };
 
 /**
- * Forwards the request to another handler internally.
- * Does not change the URL or send a redirect to the client.
+ * Forwards the request to another route internally.
+ * Does not send a redirect to the client but changes the path and method,
+ * adds X-Forwarded-[Method|Path] and X-Original-Path headers and calls
+ * `(this as Router).respond(newReq, ctx)`.
+ * NOTE: parse body only once at the first handler using `parseBody({once: true})`
+ *   as the body will be consumed at the first parseBody call.
  * @param {string} path - The new path to forward to
  * @returns {Response} A Response object with the forwarded request's response
  */
 export const forward = <XContext = {}>(
   path: string,
   options?: {
-    method: string;
+    method?: HttpMethod;
   },
-): Handler<RouterContext<XContext>> => {
+): BoundHandler<XContext> => {
   return async function (this: Router<XContext>, req, ctx) {
+    const method = options?.method ?? req.method;
+    const headers = new Headers(req.headers);
+    const body = req.body ? req.clone().body : undefined;
     const url = new URL(req.url);
+    const originalPathname = url.pathname;
     url.pathname = path;
-    const newReq = new Request(url.toString(), {
-      method: options?.method ?? req.method,
-      headers: req.headers,
-      body: req.body ? req.clone().body : undefined,
-    });
+    if (method != req.method) headers.set("X-Forwarded-Method", req.method);
+    headers.set("X-Forwarded-Path", originalPathname);
+    if (!req.headers.has("X-Original-Path")) {
+      headers.set("X-Original-Path", originalPathname);
+    }
+    const newReq = new Request(url.toString(), { method, headers, body });
     return this.respond(newReq, ctx);
   };
 };
@@ -640,12 +649,21 @@ export const parseCookie = <Context extends CTXCookie>(): Handler<Context> => {
 };
 
 /**
+ * Parsed body object types.
+ * @typedef {Object} ParsedBody
+ */
+export type ParsedBody =
+  | { value: string | number | boolean | null }
+  | { values: unknown[] }
+  | Record<string, unknown>;
+
+/**
  * Context object containing parsed request body.
  * @typedef {Object} CTXBody
- * @property {Record<string, unknown>} body - Parsed request body data
+ * @property {ParsedBody} body - Parsed request body data
  */
 export type CTXBody = {
-  body: Record<string, unknown>;
+  body: ParsedBody;
 };
 
 /**
@@ -667,13 +685,11 @@ export type SupportedBodyMediaTypes =
  * @throws {Response} Returns a 415 response if content-type is not accepted
  * @throws {Response} Returns a 413 response if body exceeds maxSize
  * @throws {Response} Returns a 400 response if body is malformed
- * @example
- * const bodyParser = parseBody({ maxSize: 5000 });
- * // Use in respondWith: respondWith({}, bodyParser(), ...otherHandlers)
  */
 export const parseBody = <Context extends CTXBody>(options?: {
   accept?: SupportedBodyMediaTypes | SupportedBodyMediaTypes[]; // defaults to all
   maxSize?: number; // in bytes
+  once?: boolean;
 }): Handler<Context> => {
   const accept = options?.accept
     ? Array.isArray(options.accept)
@@ -685,7 +701,9 @@ export const parseBody = <Context extends CTXBody>(options?: {
         "text/plain",
       ] as string[]);
   const maxSize = options?.maxSize ?? 1024 * 1024; // Default 1MB
+  const once = options?.once;
   return async (req: Request, ctx: Context) => {
+    if (once && ctx.body) return;
     const contentType = req.headers.get("content-type")?.split(";", 2)[0];
     if (!(contentType && accept.includes(contentType))) {
       await req.body?.cancel().catch(() => {});
@@ -693,7 +711,14 @@ export const parseBody = <Context extends CTXBody>(options?: {
     }
     try {
       const contentLengthHeader = req.headers.get("content-length");
-      if (!contentLengthHeader || parseInt(contentLengthHeader) > maxSize) {
+      const contentLength = contentLengthHeader
+        ? parseInt(contentLengthHeader)
+        : 0;
+      if (contentLength === 0) {
+        ctx.body = {};
+        return;
+      }
+      if (contentLength > maxSize) {
         await req.body?.cancel().catch(() => {});
         return status(413);
       }
@@ -705,8 +730,17 @@ export const parseBody = <Context extends CTXBody>(options?: {
         }
         case "application/json": {
           const body = await req.json();
-          ctx.body =
-            typeof body === "object" ? (body as Record<string, unknown>) : {};
+          if (Array.isArray(body)) {
+            ctx.body = { values: body };
+          } else if (body === undefined) {
+            ctx.body = {};
+          } else if (body === null) {
+            ctx.body = { value: null };
+          } else if (typeof body === "object") {
+            ctx.body = body;
+          } else {
+            ctx.body = { value: body };
+          }
           break;
         }
         case "text/plain": {
@@ -718,7 +752,7 @@ export const parseBody = <Context extends CTXBody>(options?: {
           ctx.body = {};
           break;
       }
-    } catch {
+    } catch (error) {
       await req.body?.cancel().catch(() => {});
       return status(400, "Malformed Payload");
     }

@@ -1,5 +1,4 @@
-import { RouterContext } from "./router";
-import { Handler } from "./types";
+import type { BoundHandler, Handler, HttpMethod } from "./types";
 export * from "./upload-stream";
 export interface SocketAddress {
     address: string;
@@ -36,14 +35,18 @@ export declare const status: (status: number, content?: string | null, init?: Re
  */
 export declare const redirect: (location: string, init?: ResponseInit) => Response;
 /**
- * Forwards the request to another handler internally.
- * Does not change the URL or send a redirect to the client.
+ * Forwards the request to another route internally.
+ * Does not send a redirect to the client but changes the path and method,
+ * adds X-Forwarded-[Method|Path] and X-Original-Path headers and calls
+ * `(this as Router).respond(newReq, ctx)`.
+ * NOTE: parse body only once at the first handler using `parseBody({once: true})`
+ *   as the body will be consumed at the first parseBody call.
  * @param {string} path - The new path to forward to
  * @returns {Response} A Response object with the forwarded request's response
  */
 export declare const forward: <XContext = {}>(path: string, options?: {
-    method: string;
-}) => Handler<RouterContext<XContext>>;
+    method?: HttpMethod;
+}) => BoundHandler<XContext>;
 /**
  * Creates a text/plain Response.
  * Defaults to status 200 and text/plain content-type if not specified.
@@ -211,12 +214,21 @@ export type CTXCookie = {
  */
 export declare const parseCookie: <Context extends CTXCookie>() => Handler<Context>;
 /**
+ * Parsed body object types.
+ * @typedef {Object} ParsedBody
+ */
+export type ParsedBody = {
+    value: string | number | boolean | null;
+} | {
+    values: unknown[];
+} | Record<string, unknown>;
+/**
  * Context object containing parsed request body.
  * @typedef {Object} CTXBody
- * @property {Record<string, unknown>} body - Parsed request body data
+ * @property {ParsedBody} body - Parsed request body data
  */
 export type CTXBody = {
-    body: Record<string, unknown>;
+    body: ParsedBody;
 };
 /**
  * Supported media types for request body parsing.
@@ -233,13 +245,11 @@ export type SupportedBodyMediaTypes = "application/x-www-form-urlencoded" | "app
  * @throws {Response} Returns a 415 response if content-type is not accepted
  * @throws {Response} Returns a 413 response if body exceeds maxSize
  * @throws {Response} Returns a 400 response if body is malformed
- * @example
- * const bodyParser = parseBody({ maxSize: 5000 });
- * // Use in respondWith: respondWith({}, bodyParser(), ...otherHandlers)
  */
 export declare const parseBody: <Context extends CTXBody>(options?: {
     accept?: SupportedBodyMediaTypes | SupportedBodyMediaTypes[];
     maxSize?: number;
+    once?: boolean;
 }) => Handler<Context>;
 /**
  * Request handler function type.

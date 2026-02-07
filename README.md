@@ -572,6 +572,41 @@ router.handle("GET /status", () => status(204, null)); // No Content
 router.handle("GET /intro.mp4", () => blob(Bun.file("./intro.mp4")));
 router.handle("GET /download", () => octetStream(Bun.file("./intro.mp4")));
 
+router.handle("GET /new-location", () => html("GET new-location"));
+// router.handle("POST /new-location", () => html("POST new-location"));
+router.handle<CTXBody>("POST /new-location", [
+  parseBody({ once: true }),
+  forward("/new-location2"),
+]);
+router.handle<CTXBody>("POST /new-location2", [
+  parseBody({ once: true }),
+  () => html("POST new-location2"),
+]);
+router.handle("GET /redirected", () => redirect("/new-location"));
+router.handle("GET /forwarded", forward("/new-location"));
+// this would set the headers:
+// "x-forwarded-path": "/forwarded"
+// "x-original-path": "/forwarded"
+router.handle<CTXBody>("PUT /forwarded-with-new-method", [
+  parseBody({ once: true }),
+  (req, { body }) => {
+    console.log(body);
+  },
+  forward("/new-location", { method: "POST" }),
+]);
+// this would set the headers:
+// "x-forwarded-method": "PUT"
+// "x-forwarded-path": "/new-location"
+// "x-original-path": "/forwarded-with-new-method"
+router.handle("GET /forwarded-conditional", function (this: Router, req, ctx) {
+  if (req.headers.get("authorization"))
+    return forward("/new-location").bind(this)(req, ctx);
+  // or return forward("/new-location").apply(this, [req, ctx]);
+  // NOTE: be careful when binding instance `router` instead of `this`
+  //   as it might be called from a different router due to append.
+  return status(401);
+});
+
 router.handle<CTXCookie>("GET /cookie", [
   parseCookie(),
   (req, { cookie }) => json({ cookie }),

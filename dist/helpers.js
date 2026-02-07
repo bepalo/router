@@ -239,8 +239,12 @@ const redirect = (location, init) => {
 };
 exports.redirect = redirect;
 /**
- * Forwards the request to another handler internally.
- * Does not change the URL or send a redirect to the client.
+ * Forwards the request to another route internally.
+ * Does not send a redirect to the client but changes the path and method,
+ * adds X-Forwarded-[Method|Path] and X-Original-Path headers and calls
+ * `(this as Router).respond(newReq, ctx)`.
+ * NOTE: parse body only once at the first handler using `parseBody({once: true})`
+ *   as the body will be consumed at the first parseBody call.
  * @param {string} path - The new path to forward to
  * @returns {Response} A Response object with the forwarded request's response
  */
@@ -248,13 +252,19 @@ const forward = (path, options) => {
     return function (req, ctx) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
+            const method = (_a = options === null || options === void 0 ? void 0 : options.method) !== null && _a !== void 0 ? _a : req.method;
+            const headers = new Headers(req.headers);
+            const body = req.body ? req.clone().body : undefined;
             const url = new URL(req.url);
+            const originalPathname = url.pathname;
             url.pathname = path;
-            const newReq = new Request(url.toString(), {
-                method: (_a = options === null || options === void 0 ? void 0 : options.method) !== null && _a !== void 0 ? _a : req.method,
-                headers: req.headers,
-                body: req.body ? req.clone().body : undefined,
-            });
+            if (method != req.method)
+                headers.set("X-Forwarded-Method", req.method);
+            headers.set("X-Forwarded-Path", originalPathname);
+            if (!req.headers.has("X-Original-Path")) {
+                headers.set("X-Original-Path", originalPathname);
+            }
+            const newReq = new Request(url.toString(), { method, headers, body });
             return this.respond(newReq, ctx);
         });
     };
@@ -584,9 +594,6 @@ exports.parseCookie = parseCookie;
  * @throws {Response} Returns a 415 response if content-type is not accepted
  * @throws {Response} Returns a 413 response if body exceeds maxSize
  * @throws {Response} Returns a 400 response if body is malformed
- * @example
- * const bodyParser = parseBody({ maxSize: 5000 });
- * // Use in respondWith: respondWith({}, bodyParser(), ...otherHandlers)
  */
 const parseBody = (options) => {
     var _a;
@@ -600,8 +607,11 @@ const parseBody = (options) => {
             "text/plain",
         ];
     const maxSize = (_a = options === null || options === void 0 ? void 0 : options.maxSize) !== null && _a !== void 0 ? _a : 1024 * 1024; // Default 1MB
+    const once = options === null || options === void 0 ? void 0 : options.once;
     return (req, ctx) => __awaiter(void 0, void 0, void 0, function* () {
         var _a, _b, _c, _d;
+        if (once && ctx.body)
+            return;
         const contentType = (_a = req.headers.get("content-type")) === null || _a === void 0 ? void 0 : _a.split(";", 2)[0];
         if (!(contentType && accept.includes(contentType))) {
             yield ((_b = req.body) === null || _b === void 0 ? void 0 : _b.cancel().catch(() => { }));
@@ -609,7 +619,14 @@ const parseBody = (options) => {
         }
         try {
             const contentLengthHeader = req.headers.get("content-length");
-            if (!contentLengthHeader || parseInt(contentLengthHeader) > maxSize) {
+            const contentLength = contentLengthHeader
+                ? parseInt(contentLengthHeader)
+                : 0;
+            if (contentLength === 0) {
+                ctx.body = {};
+                return;
+            }
+            if (contentLength > maxSize) {
                 yield ((_c = req.body) === null || _c === void 0 ? void 0 : _c.cancel().catch(() => { }));
                 return (0, exports.status)(413);
             }
@@ -621,8 +638,21 @@ const parseBody = (options) => {
                 }
                 case "application/json": {
                     const body = yield req.json();
-                    ctx.body =
-                        typeof body === "object" ? body : {};
+                    if (Array.isArray(body)) {
+                        ctx.body = { values: body };
+                    }
+                    else if (body === undefined) {
+                        ctx.body = {};
+                    }
+                    else if (body === null) {
+                        ctx.body = { value: null };
+                    }
+                    else if (typeof body === "object") {
+                        ctx.body = body;
+                    }
+                    else {
+                        ctx.body = { value: body };
+                    }
                     break;
                 }
                 case "text/plain": {
@@ -635,7 +665,7 @@ const parseBody = (options) => {
                     break;
             }
         }
-        catch (_e) {
+        catch (error) {
             yield ((_d = req.body) === null || _d === void 0 ? void 0 : _d.cancel().catch(() => { }));
             return (0, exports.status)(400, "Malformed Payload");
         }
