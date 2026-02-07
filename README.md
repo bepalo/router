@@ -575,11 +575,13 @@ router.handle("GET /download", () => octetStream(Bun.file("./intro.mp4")));
 router.handle("GET /new-location", () => html("GET new-location"));
 // router.handle("POST /new-location", () => html("POST new-location"));
 router.handle<CTXBody>("POST /new-location", [
-  parseBody({ once: true }),
+  parseBody({ once: true, clone: true }),
+  (req, { body }) => console.log(body),
   forward("/new-location2"),
 ]);
 router.handle<CTXBody>("POST /new-location2", [
-  parseBody({ once: true }),
+  parseBody({ once: true, clone: false }),
+  (req, { body }) => console.log(body),
   () => html("POST new-location2"),
 ]);
 router.handle("GET /redirected", () => redirect("/new-location"));
@@ -588,10 +590,8 @@ router.handle("GET /forwarded", forward("/new-location"));
 // "x-forwarded-path": "/forwarded"
 // "x-original-path": "/forwarded"
 router.handle<CTXBody>("PUT /forwarded-with-new-method", [
-  parseBody({ once: true }),
-  (req, { body }) => {
-    console.log(body);
-  },
+  parseBody({ once: true, clone: true }),
+  (req, { body }) => console.log(body),
   forward("/new-location", { method: "POST" }),
 ]);
 // this would set the headers:
@@ -635,19 +635,50 @@ router.handle("DELETE /cookie/:name", [
     }),
 ]);
 
+// be sure to create ./upload folder for this example
 router.handle<CTXUpload>("POST /upload", [
   (req, ctx) => {
     let file: Bun.BunFile;
     let fileWriter: Bun.FileSink;
     return parseUploadStreaming({
       allowedTypes: ["image/jpeg"],
-      async onFileStart(uploadId, fieldName, fileName, contentType, fileSize) {
-        console.log(fileSize);
+      maxFileSize: 5 * 1024 * 1024,
+      maxTotalSize: 5 * 1024 * 1024 + 1024,
+      maxFields: 1,
+      maxFiles: 1,
+      // uploadIdGenerator: () =>
+      //   `upload_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      async onUploadStart(uploadId, totalSize) {
+        console.log("onUploadStart", { uploadId, totalSize });
+      },
+      async onError(uploadId, error) {
+        console.error("onError", uploadId, error);
+      },
+      async onFileError(uploadId, fieldName, fileName, error) {
+        console.error("onFileError", uploadId, error);
+      },
+      async onField(uploadId, fieldName, value) {
+        console.log("onField", { uploadId, fieldName, value });
+      },
+      async onFileStart(uploadId, fieldName, fileName, contentType) {
+        console.log("onFileStart", {
+          uploadId,
+          fieldName,
+          fileName,
+          contentType,
+        });
         const ext = fileName.substring(fileName.lastIndexOf("."));
-        file = Bun.file("./uploads/" + uploadId + ext);
+        const customFilename = uploadId + ext;
+        file = Bun.file("./uploads/" + customFilename);
         fileWriter = file.writer();
+        return {
+          customFilename,
+          // metadata
+        };
       },
       async onFileChunk(uploadId, fieldName, fileName, chunk, offset, isLast) {
+        const chunkSize = chunk.byteLength;
+        console.log("onFileChunk", { uploadId, chunkSize, offset, isLast });
         fileWriter.write(chunk);
       },
       async onFileComplete(
@@ -658,16 +689,25 @@ router.handle<CTXUpload>("POST /upload", [
         customFilename,
         metadata,
       ) {
-        console.log({ uploadId, fieldName, fileName, fileSize });
+        console.log("onFileComplete", {
+          uploadId,
+          fieldName,
+          fileName,
+          fileSize,
+          customFilename,
+          metadata,
+        });
+        if (fileWriter) {
+          fileWriter.end();
+        }
       },
       async onUploadComplete(uploadId, success) {
-        console.log({ uploadId, success });
+        console.log("onUploadComplete", { uploadId, success });
       },
     })(req, ctx);
   },
   (req, { uploadId, fields, files }) => {
     console.log({ uploadId, fields, files });
-    console.log(files.get("profile"));
     return status(200);
   },
 ]);

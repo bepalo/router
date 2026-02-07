@@ -5,9 +5,8 @@
  * @exports Router
  */
 
-import { CTXError } from "./helpers";
 import { Tree } from "./tree";
-import {
+import type {
   HttpMethod,
   MethodPath,
   Pipeline,
@@ -16,6 +15,7 @@ import {
   Handler,
   HeaderTuple,
   BoundHandler,
+  CTXError,
 } from "./types";
 
 /**

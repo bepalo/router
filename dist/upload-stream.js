@@ -49,7 +49,7 @@ const helpers_1 = require("./helpers");
 const parseUploadStreaming = (options) => {
     const { maxTotalSize = 100 * 1024 * 1024, // 100MB default
     maxFileSize = 20 * 1024 * 1024, // 20MB per file
-    maxFiles = 50, maxFields = 1000, allowedTypes, uploadIdGenerator = () => `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, onUploadStart, onUploadComplete, onFileStart, onFileChunk, onFileComplete, onFileError, onField, onError, } = options || {};
+    maxFiles = 50, maxFields = 1000, allowedTypes, uploadIdGenerator = () => `upload_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, onUploadStart, onUploadComplete, onFileStart, onFileChunk, onFileComplete, onFileError, onField, onError, } = options || {};
     return (req, ctx) => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
         const contentType = req.headers.get("content-type");
@@ -81,7 +81,6 @@ const parseUploadStreaming = (options) => {
             let currentPart = null;
             const boundaryBytes = new TextEncoder().encode(`--${boundary}`);
             const boundaryEndBytes = new TextEncoder().encode(`--${boundary}--`);
-            const crlfBytes = new TextEncoder().encode("\r\n");
             const headerEndBytes = new TextEncoder().encode("\r\n\r\n");
             // Notify upload start
             if (onUploadStart) {

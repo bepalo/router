@@ -4,9 +4,8 @@
  * @author Natnael Eshetu
  * @exports Router
  */
-import { CTXError } from "./helpers";
 import { Tree } from "./tree";
-import { HttpMethod, MethodPath, Pipeline, HandlerType, HttpPath, Handler, HeaderTuple } from "./types";
+import type { HttpMethod, MethodPath, Pipeline, HandlerType, HttpPath, Handler, HeaderTuple, CTXError } from "./types";
 /**
  * Checks if a string is a valid HTTP method.
  * @param {string} method - The method string to validate

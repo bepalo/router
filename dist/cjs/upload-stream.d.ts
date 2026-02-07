@@ -1,4 +1,4 @@
-import { Handler } from "./types";
+import { FreeHandler } from "./types";
 /**
  * Context object containing parsed upload data from multipart/form-data requests.
  * @typedef {Object} CTXUpload
@@ -57,7 +57,7 @@ export type StreamingUploadOptions = {
     uploadIdGenerator?: () => string | Promise<string>;
     onUploadStart?: (uploadId: string, totalSize: number) => Promise<void>;
     onUploadComplete?: (uploadId: string, success: boolean) => Promise<void>;
-    onFileStart?: (uploadId: string, fieldName: string, fileName: string, contentType: string, fileSize?: number) => Promise<{
+    onFileStart?: (uploadId: string, fieldName: string, fileName: string, contentType: string) => Promise<{
         customFilename?: string;
         metadata?: Record<string, any>;
     } | void>;
@@ -102,5 +102,5 @@ export type StreamingUploadOptions = {
  *   });
  * });
  */
-export declare const parseUploadStreaming: <Context extends CTXUpload>(options?: StreamingUploadOptions) => Handler<Context>;
+export declare const parseUploadStreaming: <XContext = {}>(options?: StreamingUploadOptions) => FreeHandler<XContext & CTXUpload>;
 //# sourceMappingURL=upload-stream.d.ts.map

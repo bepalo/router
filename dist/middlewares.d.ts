@@ -1,8 +1,64 @@
-import { CTXAddress } from "./helpers";
-import { RouterContext } from "./router";
-import { Handler, HttpMethod } from "./types";
+import type { RouterContext } from "./router";
+import type { FreeHandler, Handler, HttpMethod, CTXAddress } from "./types";
 import { CacheConfig } from "@bepalo/cache";
 import { JWT, JwtPayload, JwtVerifyOptions } from "@bepalo/jwt";
+/**
+ * Context object containing parsed cookies.
+ * @typedef {Object} CTXCookie
+ * @property {Record<string, string>} cookie - Parsed cookies from the request
+ */
+export type CTXCookie = {
+    cookie: Record<string, string>;
+};
+/**
+ * Creates middleware that parses cookies from the request and adds them to the context.
+ * @returns {Function} A middleware function that adds parsed cookies to context.cookie
+ * @example
+ * const cookieParser = parseCookie();
+ * // Use in respondWith: respondWith({}, cookieParser(), ...otherHandlers)
+ */
+export declare const parseCookie: <Context extends CTXCookie>() => FreeHandler<Context>;
+/**
+ * Parsed body object types.
+ * @typedef {Object} ParsedBody
+ */
+export type ParsedBody = {
+    value: string | number | boolean | null;
+} | {
+    values: unknown[];
+} | Record<string, unknown>;
+/**
+ * Context object containing parsed request body.
+ * @typedef {Object} CTXBody
+ * @property {ParsedBody} body - Parsed request body data
+ */
+export type CTXBody = {
+    body: ParsedBody;
+};
+/**
+ * Supported media types for request body parsing.
+ * @typedef {"application/x-www-form-urlencoded"|"application/json"|"text/plain"} SupportedBodyMediaTypes
+ */
+export type SupportedBodyMediaTypes = "application/x-www-form-urlencoded" | "application/json" | "text/plain";
+/**
+ * Creates middleware that parses the request body based on Content-Type.
+ * Supports url-encoded forms, JSON, and plain text.
+ * @param {Object} [options] - Configuration options for body parsing
+ * @param {SupportedBodyMediaTypes|SupportedBodyMediaTypes[]} [options.accept] - Media types to accept (defaults to all supported)
+ * @param {number} [options.maxSize] - Maximum body size in bytes (defaults to 1MB)
+ * @param {number} [options.once] - Do not parse if parsed already. checks `ctx.body`
+ * @param {number} [options.clone] - Clone request before parsing it. Useful for forwarding.
+ * @returns {Function} A middleware function that adds parsed body to context.body
+ * @throws {Response} Returns a 415 response if content-type is not accepted
+ * @throws {Response} Returns a 413 response if body exceeds maxSize
+ * @throws {Response} Returns a 400 response if body is malformed
+ */
+export declare const parseBody: <Context extends CTXBody>(options?: {
+    accept?: SupportedBodyMediaTypes | SupportedBodyMediaTypes[];
+    maxSize?: number;
+    once?: boolean;
+    clone?: boolean;
+}) => FreeHandler<Context>;
 /**
  * Creates a rate limiting middleware using token bucket algorithm.
  * Supports both fixed interval refill and continuous rate-based refill.

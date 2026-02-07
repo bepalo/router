@@ -1,9 +1,151 @@
-import { CTXAddress, status } from "./helpers";
-import Router, { RouterContext } from "./router";
-import { Handler, HttpMethod } from "./types";
+import { parseCookieFromRequest, status } from "./helpers";
+import type { RouterContext } from "./router";
+import type { FreeHandler, Handler, HttpMethod, CTXAddress } from "./types";
 import { Cache, CacheConfig } from "@bepalo/cache";
 import { JWT, JwtPayload, JwtVerifyOptions } from "@bepalo/jwt";
 import { Time } from "@bepalo/time";
+
+/**
+ * Context object containing parsed cookies.
+ * @typedef {Object} CTXCookie
+ * @property {Record<string, string>} cookie - Parsed cookies from the request
+ */
+export type CTXCookie = {
+  cookie: Record<string, string>;
+};
+
+/**
+ * Creates middleware that parses cookies from the request and adds them to the context.
+ * @returns {Function} A middleware function that adds parsed cookies to context.cookie
+ * @example
+ * const cookieParser = parseCookie();
+ * // Use in respondWith: respondWith({}, cookieParser(), ...otherHandlers)
+ */
+export const parseCookie = <
+  Context extends CTXCookie,
+>(): FreeHandler<Context> => {
+  return (req: Request, ctx: Context) => {
+    const cookie = parseCookieFromRequest(req) ?? {};
+    ctx.cookie = cookie;
+  };
+};
+
+/**
+ * Parsed body object types.
+ * @typedef {Object} ParsedBody
+ */
+export type ParsedBody =
+  | { value: string | number | boolean | null }
+  | { values: unknown[] }
+  | Record<string, unknown>;
+
+/**
+ * Context object containing parsed request body.
+ * @typedef {Object} CTXBody
+ * @property {ParsedBody} body - Parsed request body data
+ */
+export type CTXBody = {
+  body: ParsedBody;
+};
+
+/**
+ * Supported media types for request body parsing.
+ * @typedef {"application/x-www-form-urlencoded"|"application/json"|"text/plain"} SupportedBodyMediaTypes
+ */
+export type SupportedBodyMediaTypes =
+  | "application/x-www-form-urlencoded"
+  | "application/json"
+  | "text/plain";
+
+/**
+ * Creates middleware that parses the request body based on Content-Type.
+ * Supports url-encoded forms, JSON, and plain text.
+ * @param {Object} [options] - Configuration options for body parsing
+ * @param {SupportedBodyMediaTypes|SupportedBodyMediaTypes[]} [options.accept] - Media types to accept (defaults to all supported)
+ * @param {number} [options.maxSize] - Maximum body size in bytes (defaults to 1MB)
+ * @param {number} [options.once] - Do not parse if parsed already. checks `ctx.body`
+ * @param {number} [options.clone] - Clone request before parsing it. Useful for forwarding.
+ * @returns {Function} A middleware function that adds parsed body to context.body
+ * @throws {Response} Returns a 415 response if content-type is not accepted
+ * @throws {Response} Returns a 413 response if body exceeds maxSize
+ * @throws {Response} Returns a 400 response if body is malformed
+ */
+export const parseBody = <Context extends CTXBody>(options?: {
+  accept?: SupportedBodyMediaTypes | SupportedBodyMediaTypes[]; // defaults to all
+  maxSize?: number; // in bytes
+  once?: boolean;
+  clone?: boolean;
+}): FreeHandler<Context> => {
+  const accept = options?.accept
+    ? Array.isArray(options.accept)
+      ? options.accept
+      : [options.accept]
+    : ([
+        "application/x-www-form-urlencoded",
+        "application/json",
+        "text/plain",
+      ] as string[]);
+  const maxSize = options?.maxSize ?? 1024 * 1024; // Default 1MB
+  const once = options?.once;
+  const clone = options?.clone;
+  return async (_req: Request, ctx: Context) => {
+    console.log(_req.url, { once, body: ctx.body });
+    if (once && ctx.body) return;
+    const contentType = _req.headers.get("content-type")?.split(";", 2)[0];
+    if (!(contentType && accept.includes(contentType))) {
+      await _req.body?.cancel().catch(() => {});
+      return status(415);
+    }
+    const req = clone ? _req.clone() : _req;
+    try {
+      const contentLengthHeader = req.headers.get("content-length");
+      const contentLength = contentLengthHeader
+        ? parseInt(contentLengthHeader)
+        : undefined;
+      if (contentLength === 0) {
+        ctx.body = {};
+        return;
+      }
+      if (contentLength !== undefined && contentLength > maxSize) {
+        await _req.body?.cancel().catch(() => {});
+        return status(413);
+      }
+      switch (contentType) {
+        case "application/x-www-form-urlencoded": {
+          const body = await req.formData();
+          ctx.body = Object.fromEntries(body.entries());
+          break;
+        }
+        case "application/json": {
+          const body = await req.json();
+          if (Array.isArray(body)) {
+            ctx.body = { values: body };
+          } else if (body === undefined) {
+            ctx.body = {};
+          } else if (body === null) {
+            ctx.body = { value: null };
+          } else if (typeof body === "object") {
+            ctx.body = body;
+          } else {
+            ctx.body = { value: body };
+          }
+          break;
+        }
+        case "text/plain": {
+          const text = await req.text();
+          ctx.body = { text };
+          break;
+        }
+        default:
+          ctx.body = {};
+          break;
+      }
+    } catch (error) {
+      await _req.body?.cancel().catch(() => {});
+      return status(400, "Malformed Payload");
+    }
+  };
+};
 
 /**
  * Creates a rate limiting middleware using token bucket algorithm.
