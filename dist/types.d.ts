@@ -77,7 +77,7 @@ export type HandlerType = "filter" | "hook" | "handler" | "fallback" | "catcher"
  */
 export type HandlerResponse = Response | void | boolean | Promise<Response | void | boolean>;
 export type BoundHandler<XContext = {}> = (this: Router<XContext>, req: Request, ctx: RouterContext<XContext>) => HandlerResponse;
-export type NonBoundHandler<XContext = {}> = (req: Request, ctx: RouterContext<XContext>) => HandlerResponse;
+export type FreeHandler<XContext = {}> = (req: Request, ctx: RouterContext<XContext>) => HandlerResponse;
 /**
  * Generic handler function type.
  * Represents a function that processes HTTP requests.
@@ -105,7 +105,7 @@ export type NonBoundHandler<XContext = {}> = (req: Request, ctx: RouterContext<X
  *   // Return nothing to continue to next handler
  * };
  */
-export type Handler<XContext = {}> = NonBoundHandler<XContext> | BoundHandler<XContext>;
+export type Handler<XContext = {}> = FreeHandler<XContext> | BoundHandler<XContext>;
 /**
  * Array of handler functions executed in sequence.
  * Used to group multiple handlers for a route.
@@ -134,4 +134,30 @@ export type Pipeline<Context = {}> = Array<Handler<Context>>;
  *
  */
 export type HeaderTuple = [string, string];
+/**
+ * Generic SocketAddress structure
+ *
+ * @typedef {{address:string;family:string;port:number;}} SocketAddress
+ */
+export interface SocketAddress {
+    address: string;
+    family: string;
+    port: number;
+}
+/**
+ * Router Context for certain error
+ *
+ * @typedef {{error:Error}} CTXError
+ */
+export type CTXError = {
+    error: Error;
+};
+/**
+ * Router Context for sharing client address
+ *
+ * @typedef {{address:SocketAddress}} CTXAddress
+ */
+export type CTXAddress = {
+    address: SocketAddress;
+};
 //# sourceMappingURL=types.d.ts.map

@@ -105,7 +105,7 @@ export type BoundHandler<XContext = {}> = (
   ctx: RouterContext<XContext>,
 ) => HandlerResponse;
 
-export type NonBoundHandler<XContext = {}> = (
+export type FreeHandler<XContext = {}> = (
   req: Request,
   ctx: RouterContext<XContext>,
 ) => HandlerResponse;
@@ -138,7 +138,7 @@ export type NonBoundHandler<XContext = {}> = (
  * };
  */
 export type Handler<XContext = {}> =
-  | NonBoundHandler<XContext>
+  | FreeHandler<XContext>
   | BoundHandler<XContext>;
 
 /**
@@ -170,3 +170,28 @@ export type Pipeline<Context = {}> = Array<Handler<Context>>;
  *
  */
 export type HeaderTuple = [string, string];
+
+/**
+ * Generic SocketAddress structure
+ *
+ * @typedef {{address:string;family:string;port:number;}} SocketAddress
+ */
+export interface SocketAddress {
+  address: string;
+  family: string;
+  port: number;
+}
+
+/**
+ * Router Context for certain error
+ *
+ * @typedef {{error:Error}} CTXError
+ */
+export type CTXError = { error: Error };
+
+/**
+ * Router Context for sharing client address
+ *
+ * @typedef {{address:SocketAddress}} CTXAddress
+ */
+export type CTXAddress = { address: SocketAddress };

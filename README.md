@@ -541,6 +541,7 @@ router.respond(
 
 ```ts
 import {
+  Status, // Status enum
   status, // HTTP status response
   redirect, // Redirect response with location header set
   forward, // forward to other path within the router.
@@ -568,18 +569,20 @@ const router = new Router();
 router.handle("GET /text", () => text("Hello World"));
 router.handle("GET /html", () => html("<h1>Title</h1>"));
 router.handle("GET /json", () => json({ data: "value" }));
-router.handle("GET /status", () => status(204, null)); // No Content
+router.handle("GET /status", () => status(Status._204_NoContent, null)); // No Content
 router.handle("GET /intro.mp4", () => blob(Bun.file("./intro.mp4")));
 router.handle("GET /download", () => octetStream(Bun.file("./intro.mp4")));
 
 router.handle("GET /new-location", () => html("GET new-location"));
 // router.handle("POST /new-location", () => html("POST new-location"));
 router.handle<CTXBody>("POST /new-location", [
-  parseBody({ once: true }),
+  parseBody({ once: true, clone: true }),
+  (req, { body }) => console.log(body),
   forward("/new-location2"),
 ]);
 router.handle<CTXBody>("POST /new-location2", [
-  parseBody({ once: true }),
+  parseBody({ once: true, clone: false }),
+  (req, { body }) => console.log(body),
   () => html("POST new-location2"),
 ]);
 router.handle("GET /redirected", () => redirect("/new-location"));
@@ -588,10 +591,8 @@ router.handle("GET /forwarded", forward("/new-location"));
 // "x-forwarded-path": "/forwarded"
 // "x-original-path": "/forwarded"
 router.handle<CTXBody>("PUT /forwarded-with-new-method", [
-  parseBody({ once: true }),
-  (req, { body }) => {
-    console.log(body);
-  },
+  parseBody({ once: true, clone: true }),
+  (req, { body }) => console.log(body),
   forward("/new-location", { method: "POST" }),
 ]);
 // this would set the headers:
@@ -604,7 +605,7 @@ router.handle("GET /forwarded-conditional", function (this: Router, req, ctx) {
   // or return forward("/new-location").apply(this, [req, ctx]);
   // NOTE: be careful when binding instance `router` instead of `this`
   //   as it might be called from a different router due to append.
-  return status(401);
+  return status(Status._401_Unauthorized);
 });
 
 router.handle<CTXCookie>("GET /cookie", [
@@ -615,7 +616,8 @@ router.handle<CTXCookie>("GET /cookie", [
 router.handle<CTXBody>("POST /cookie", [
   parseBody(),
   (req, { body }) => {
-    return status(200, "OK", {
+    return status(Status._200_OK, "OK", {
+      // or `, undefined, {` and the status text will be set
       headers: [
         ...Object.entries(body).map(([name, value]) =>
           setCookie(name, String(value), {
@@ -630,24 +632,55 @@ router.handle<CTXBody>("POST /cookie", [
 
 router.handle("DELETE /cookie/:name", [
   (req, ctx) =>
-    status(200, "OK", {
+    status(Status._200_OK, undefined, {
       headers: [clearCookie(ctx.params.name, { path: "/" })],
     }),
 ]);
 
+// be sure to create ./upload folder for this example
 router.handle<CTXUpload>("POST /upload", [
   (req, ctx) => {
     let file: Bun.BunFile;
     let fileWriter: Bun.FileSink;
     return parseUploadStreaming({
       allowedTypes: ["image/jpeg"],
-      async onFileStart(uploadId, fieldName, fileName, contentType, fileSize) {
-        console.log(fileSize);
+      maxFileSize: 5 * 1024 * 1024,
+      maxTotalSize: 5 * 1024 * 1024 + 1024,
+      maxFields: 1,
+      maxFiles: 1,
+      // uploadIdGenerator: () =>
+      //   `upload_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      async onUploadStart(uploadId, totalSize) {
+        console.log("onUploadStart", { uploadId, totalSize });
+      },
+      async onError(uploadId, error) {
+        console.error("onError", uploadId, error);
+      },
+      async onFileError(uploadId, fieldName, fileName, error) {
+        console.error("onFileError", uploadId, error);
+      },
+      async onField(uploadId, fieldName, value) {
+        console.log("onField", { uploadId, fieldName, value });
+      },
+      async onFileStart(uploadId, fieldName, fileName, contentType) {
+        console.log("onFileStart", {
+          uploadId,
+          fieldName,
+          fileName,
+          contentType,
+        });
         const ext = fileName.substring(fileName.lastIndexOf("."));
-        file = Bun.file("./uploads/" + uploadId + ext);
+        const customFilename = uploadId + ext;
+        file = Bun.file("./uploads/" + customFilename);
         fileWriter = file.writer();
+        return {
+          customFilename,
+          // metadata
+        };
       },
       async onFileChunk(uploadId, fieldName, fileName, chunk, offset, isLast) {
+        const chunkSize = chunk.byteLength;
+        console.log("onFileChunk", { uploadId, chunkSize, offset, isLast });
         fileWriter.write(chunk);
       },
       async onFileComplete(
@@ -658,17 +691,26 @@ router.handle<CTXUpload>("POST /upload", [
         customFilename,
         metadata,
       ) {
-        console.log({ uploadId, fieldName, fileName, fileSize });
+        console.log("onFileComplete", {
+          uploadId,
+          fieldName,
+          fileName,
+          fileSize,
+          customFilename,
+          metadata,
+        });
+        if (fileWriter) {
+          fileWriter.end();
+        }
       },
       async onUploadComplete(uploadId, success) {
-        console.log({ uploadId, success });
+        console.log("onUploadComplete", { uploadId, success });
       },
     })(req, ctx);
   },
   (req, { uploadId, fields, files }) => {
     console.log({ uploadId, fields, files });
-    console.log(files.get("profile"));
-    return status(200);
+    return status(Status._200_OK);
   },
 ]);
 ```
@@ -677,6 +719,12 @@ router.handle<CTXUpload>("POST /upload", [
 
 ```ts
 import {
+  type CTXCookie,
+  parseCookie, // Cookie parser
+  type CTXBody,
+  parseBody, // Body parser
+  type CTXUpload,
+  parseUploadStreaming, // multi-part-form-data and file upload stream parser
   cors, // CORS middleware
   limitRate, // Rate limiting
   authBasic, // Basic authentication

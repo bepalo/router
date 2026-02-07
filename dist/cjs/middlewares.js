@@ -1,9 +1,126 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authJWT = exports.authAPIKey = exports.authBasic = exports.cors = exports.limitRate = void 0;
+exports.authJWT = exports.authAPIKey = exports.authBasic = exports.cors = exports.limitRate = exports.parseBody = exports.parseCookie = void 0;
 const helpers_1 = require("./helpers");
 const cache_1 = require("@bepalo/cache");
 const time_1 = require("@bepalo/time");
+/**
+ * Creates middleware that parses cookies from the request and adds them to the context.
+ * @returns {Function} A middleware function that adds parsed cookies to context.cookie
+ * @example
+ * const cookieParser = parseCookie();
+ * // Use in respondWith: respondWith({}, cookieParser(), ...otherHandlers)
+ */
+const parseCookie = () => {
+    return (req, ctx) => {
+        var _a;
+        const cookie = (_a = (0, helpers_1.parseCookieFromRequest)(req)) !== null && _a !== void 0 ? _a : {};
+        ctx.cookie = cookie;
+    };
+};
+exports.parseCookie = parseCookie;
+/**
+ * Creates middleware that parses the request body based on Content-Type.
+ * Supports url-encoded forms, JSON, and plain text.
+ * @param {Object} [options] - Configuration options for body parsing
+ * @param {SupportedBodyMediaTypes|SupportedBodyMediaTypes[]} [options.accept] - Media types to accept (defaults to all supported)
+ * @param {number} [options.maxSize] - Maximum body size in bytes (defaults to 1MB)
+ * @param {number} [options.once] - Do not parse if parsed already. checks `ctx.body`
+ * @param {number} [options.clone] - Clone request before parsing it. Useful for forwarding.
+ * @returns {Function} A middleware function that adds parsed body to context.body
+ * @throws {Response} Returns a 415 response if content-type is not accepted
+ * @throws {Response} Returns a 413 response if body exceeds maxSize
+ * @throws {Response} Returns a 400 response if body is malformed
+ */
+const parseBody = (options) => {
+    var _a;
+    const accept = (options === null || options === void 0 ? void 0 : options.accept)
+        ? Array.isArray(options.accept)
+            ? options.accept
+            : [options.accept]
+        : [
+            "application/x-www-form-urlencoded",
+            "application/json",
+            "text/plain",
+        ];
+    const maxSize = (_a = options === null || options === void 0 ? void 0 : options.maxSize) !== null && _a !== void 0 ? _a : 1024 * 1024; // Default 1MB
+    const once = options === null || options === void 0 ? void 0 : options.once;
+    const clone = options === null || options === void 0 ? void 0 : options.clone;
+    return (_req, ctx) => __awaiter(void 0, void 0, void 0, function* () {
+        var _a, _b, _c, _d;
+        console.log(_req.url, { once, body: ctx.body });
+        if (once && ctx.body)
+            return;
+        const contentType = (_a = _req.headers.get("content-type")) === null || _a === void 0 ? void 0 : _a.split(";", 2)[0];
+        if (!(contentType && accept.includes(contentType))) {
+            yield ((_b = _req.body) === null || _b === void 0 ? void 0 : _b.cancel().catch(() => { }));
+            return (0, helpers_1.status)(415);
+        }
+        const req = clone ? _req.clone() : _req;
+        try {
+            const contentLengthHeader = req.headers.get("content-length");
+            const contentLength = contentLengthHeader
+                ? parseInt(contentLengthHeader)
+                : undefined;
+            if (contentLength === 0) {
+                ctx.body = {};
+                return;
+            }
+            if (contentLength !== undefined && contentLength > maxSize) {
+                yield ((_c = _req.body) === null || _c === void 0 ? void 0 : _c.cancel().catch(() => { }));
+                return (0, helpers_1.status)(413);
+            }
+            switch (contentType) {
+                case "application/x-www-form-urlencoded": {
+                    const body = yield req.formData();
+                    ctx.body = Object.fromEntries(body.entries());
+                    break;
+                }
+                case "application/json": {
+                    const body = yield req.json();
+                    if (Array.isArray(body)) {
+                        ctx.body = { values: body };
+                    }
+                    else if (body === undefined) {
+                        ctx.body = {};
+                    }
+                    else if (body === null) {
+                        ctx.body = { value: null };
+                    }
+                    else if (typeof body === "object") {
+                        ctx.body = body;
+                    }
+                    else {
+                        ctx.body = { value: body };
+                    }
+                    break;
+                }
+                case "text/plain": {
+                    const text = yield req.text();
+                    ctx.body = { text };
+                    break;
+                }
+                default:
+                    ctx.body = {};
+                    break;
+            }
+        }
+        catch (error) {
+            yield ((_d = _req.body) === null || _d === void 0 ? void 0 : _d.cancel().catch(() => { }));
+            return (0, helpers_1.status)(400, "Malformed Payload");
+        }
+    });
+};
+exports.parseBody = parseBody;
 /**
  * Creates a rate limiting middleware using token bucket algorithm.
  * Supports both fixed interval refill and continuous rate-based refill.

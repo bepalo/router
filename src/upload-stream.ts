@@ -1,5 +1,6 @@
 import { status } from "./helpers";
-import { Handler } from "./types";
+import { RouterContext } from "./router";
+import { Handler, FreeHandler } from "./types";
 
 /**
  * Context object containing parsed upload data from multipart/form-data requests.
@@ -71,7 +72,6 @@ export type StreamingUploadOptions = {
     fieldName: string,
     fileName: string,
     contentType: string,
-    fileSize?: number,
   ) => Promise<{
     customFilename?: string;
     metadata?: Record<string, any>;
@@ -148,9 +148,9 @@ export type StreamingUploadOptions = {
  *   });
  * });
  */
-export const parseUploadStreaming = <Context extends CTXUpload>(
+export const parseUploadStreaming = <XContext = {}>(
   options?: StreamingUploadOptions,
-): Handler<Context> => {
+): FreeHandler<XContext & CTXUpload> => {
   const {
     maxTotalSize = 100 * 1024 * 1024, // 100MB default
     maxFileSize = 20 * 1024 * 1024, // 20MB per file
@@ -158,7 +158,7 @@ export const parseUploadStreaming = <Context extends CTXUpload>(
     maxFields = 1000,
     allowedTypes,
     uploadIdGenerator = () =>
-      `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      `upload_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     onUploadStart,
     onUploadComplete,
     onFileStart,
@@ -169,7 +169,7 @@ export const parseUploadStreaming = <Context extends CTXUpload>(
     onError,
   } = options || {};
 
-  return async (req: Request, ctx: Context) => {
+  return async (req: Request, ctx: RouterContext<XContext & CTXUpload>) => {
     const contentType = req.headers.get("content-type");
 
     // Check if it's multipart/form-data
@@ -214,7 +214,6 @@ export const parseUploadStreaming = <Context extends CTXUpload>(
 
       const boundaryBytes = new TextEncoder().encode(`--${boundary}`);
       const boundaryEndBytes = new TextEncoder().encode(`--${boundary}--`);
-      const crlfBytes = new TextEncoder().encode("\r\n");
       const headerEndBytes = new TextEncoder().encode("\r\n\r\n");
 
       // Notify upload start

@@ -1,16 +1,80 @@
-import type { BoundHandler, Handler, HttpMethod } from "./types";
+import type { BoundHandler, HttpMethod } from "./types";
 export * from "./upload-stream";
-export interface SocketAddress {
-    address: string;
-    family: string;
-    port: number;
+export declare enum Status {
+    _100_Continue = 100,
+    _101_SwitchingProtocols = 101,
+    _102_Processing = 102,
+    _103_EarlyHints = 103,
+    _200_OK = 200,
+    _201_Created = 201,
+    _202_Accepted = 202,
+    _203_NonAuthoritativeInformation = 203,
+    _204_NoContent = 204,
+    _205_ResetContent = 205,
+    _206_PartialContent = 206,
+    _207_MultiStatus = 207,
+    _208_AlreadyReported = 208,
+    _226_IMUsed = 226,
+    _300_MultipleChoices = 300,
+    _301_MovedPermanently = 301,
+    _302_Found = 302,
+    _303_SeeOther = 303,
+    _304_NotModified = 304,
+    _305_UseProxy = 305,
+    _307_TemporaryRedirect = 307,
+    _308_PermanentRedirect = 308,
+    _400_BadRequest = 400,
+    _401_Unauthorized = 401,
+    _402_PaymentRequired = 402,
+    _403_Forbidden = 403,
+    _404_NotFound = 404,
+    _405_MethodNotAllowed = 405,
+    _406_NotAcceptable = 406,
+    _407_ProxyAuthenticationRequired = 407,
+    _408_RequestTimeout = 408,
+    _409_Conflict = 409,
+    _410_Gone = 410,
+    _411_LengthRequired = 411,
+    _412_PreconditionFailed = 412,
+    _413_PayloadTooLarge = 413,
+    _414_URITooLong = 414,
+    _415_UnsupportedMediaType = 415,
+    _416_RangeNotSatisfiable = 416,
+    _417_ExpectationFailed = 417,
+    _418_IMATeapot = 418,
+    _421_MisdirectedRequest = 421,
+    _422_UnprocessableEntity = 422,
+    _423_Locked = 423,
+    _424_FailedDependency = 424,
+    _425_TooEarly = 425,
+    _426_UpgradeRequired = 426,
+    _428_PreconditionRequired = 428,
+    _429_TooManyRequests = 429,
+    _431_RequestHeaderFieldsTooLarge = 431,
+    _451_UnavailableForLegalReasons = 451,
+    _500_InternalServerError = 500,
+    _501_NotImplemented = 501,
+    _502_BadGateway = 502,
+    _503_ServiceUnavailable = 503,
+    _504_GatewayTimeout = 504,
+    _505_HTTPVersionNotSupported = 505,
+    _506_VariantAlsoNegotiates = 506,
+    _507_InsufficientStorage = 507,
+    _508_LoopDetected = 508,
+    _510_NotExtended = 510,
+    _511_NetworkAuthenticationRequired = 511,
+    _419_PageExpired = 419,
+    _420_EnhanceYourCalm = 420,
+    _450_BlockedbyWindowsParentalControls = 450,
+    _498_InvalidToken = 498,
+    _499_TokenRequired = 499,
+    _509_BandwidthLimitExceeded = 509,
+    _526_InvalidSSLCertificate = 526,
+    _529_Siteisoverloaded = 529,
+    _530_Siteisfrozen = 530,
+    _598_NetworkReadTimeoutError = 598,
+    _599_NetworkConnectTimeoutError = 599
 }
-export type CTXError = {
-    error: Error;
-};
-export type CTXAddress = {
-    address: SocketAddress;
-};
 export declare function getHttpStatusText(code: number): string;
 /**
  * Creates a Response with the specified status code.
@@ -197,60 +261,6 @@ export declare const clearCookie: (name: string, options?: CookieOptions) => Coo
  * // Returns: { session: "abc123", theme: "dark" }
  */
 export declare const parseCookieFromRequest: <Expected extends Record<string, string>>(req: Request) => Expected | undefined;
-/**
- * Context object containing parsed cookies.
- * @typedef {Object} CTXCookie
- * @property {Record<string, string>} cookie - Parsed cookies from the request
- */
-export type CTXCookie = {
-    cookie: Record<string, string>;
-};
-/**
- * Creates middleware that parses cookies from the request and adds them to the context.
- * @returns {Function} A middleware function that adds parsed cookies to context.cookie
- * @example
- * const cookieParser = parseCookie();
- * // Use in respondWith: respondWith({}, cookieParser(), ...otherHandlers)
- */
-export declare const parseCookie: <Context extends CTXCookie>() => Handler<Context>;
-/**
- * Parsed body object types.
- * @typedef {Object} ParsedBody
- */
-export type ParsedBody = {
-    value: string | number | boolean | null;
-} | {
-    values: unknown[];
-} | Record<string, unknown>;
-/**
- * Context object containing parsed request body.
- * @typedef {Object} CTXBody
- * @property {ParsedBody} body - Parsed request body data
- */
-export type CTXBody = {
-    body: ParsedBody;
-};
-/**
- * Supported media types for request body parsing.
- * @typedef {"application/x-www-form-urlencoded"|"application/json"|"text/plain"} SupportedBodyMediaTypes
- */
-export type SupportedBodyMediaTypes = "application/x-www-form-urlencoded" | "application/json" | "text/plain";
-/**
- * Creates middleware that parses the request body based on Content-Type.
- * Supports url-encoded forms, JSON, and plain text.
- * @param {Object} [options] - Configuration options for body parsing
- * @param {SupportedBodyMediaTypes|SupportedBodyMediaTypes[]} [options.accept] - Media types to accept (defaults to all supported)
- * @param {number} [options.maxSize] - Maximum body size in bytes (defaults to 1MB)
- * @returns {Function} A middleware function that adds parsed body to context.body
- * @throws {Response} Returns a 415 response if content-type is not accepted
- * @throws {Response} Returns a 413 response if body exceeds maxSize
- * @throws {Response} Returns a 400 response if body is malformed
- */
-export declare const parseBody: <Context extends CTXBody>(options?: {
-    accept?: SupportedBodyMediaTypes | SupportedBodyMediaTypes[];
-    maxSize?: number;
-    once?: boolean;
-}) => Handler<Context>;
 /**
  * Request handler function type.
  * @callback RequestHandler
