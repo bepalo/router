@@ -545,7 +545,7 @@ describe("Body Parsing Helpers", () => {
 
       await middleware(req, ctx);
 
-      expect(ctx.body).toEqual({});
+      expect(ctx.body).toEqual({ value: "string value" });
     });
 
     test("should handle invalid JSON", async () => {

@@ -2,16 +2,16 @@
 
 | 🕙 Start time | ⌛ Duration |
 | --- | ---: |
-| 1/24/2026, 12:59:50 PM | 0.825 s |
+| 2/7/2026, 11:02:11 PM | 0.524 s |
 
 | | ✅ Passed | ❌ Failed | ⏩ Skipped | 🚧 Todo | ⚪ Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
 |Test Suites|45|0|0|0|45|
 |Tests|155|0|0|0|155|
 
-## ✅ <a id="file0" href="#file0">tests/helpers.test.js</a> [[link](https://github.com/bepalo/router/blob/fbf15a3c14a2454f701414e2c044a1037d054918/tests/helpers.test.js)]
+## ✅ <a id="file0" href="#file0">tests\helpers.test.js</a>
 
-71 passed, 0 failed, 0 skipped, 0 todo, done in 47.708683000000065 s
+71 passed, 0 failed, 0 skipped, 0 todo, done in 43.80320000000006 s
 
 ```
 ✅ Response Helpers › status()
@@ -107,9 +107,9 @@
    ✅ respondWith with error in handler
 ```
 
-## ✅ <a id="file1" href="#file1">tests/router.test.js</a> [[link](https://github.com/bepalo/router/blob/fbf15a3c14a2454f701414e2c044a1037d054918/tests/router.test.js)]
+## ✅ <a id="file1" href="#file1">tests\router.test.js</a>
 
-84 passed, 0 failed, 0 skipped, 0 todo, done in 155.39858100000015 s
+84 passed, 0 failed, 0 skipped, 0 todo, done in 104.77740000000006 s
 
 ```
 ✅ Router › Core Router Functionality › Constructor and Configuration
