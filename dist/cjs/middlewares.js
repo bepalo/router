@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authJWT = exports.authAPIKey = exports.authBasic = exports.cors = exports.limitRate = exports.parseBody = exports.parseCookie = void 0;
+exports.authJWT = exports.authAPIKey = exports.authBasic = exports.authorize = exports.authenticate = exports.cors = exports.limitRate = exports.parseBody = exports.parseCookie = void 0;
 const helpers_1 = require("./helpers");
 const cache_1 = require("@bepalo/cache");
 const time_1 = require("@bepalo/time");
@@ -243,6 +243,7 @@ exports.limitRate = limitRate;
  * @param {boolean} [config.credentials=false] - Allow credentials (cookies, authorization headers)
  * @param {number} [config.maxAge=86400] - Maximum age for preflight cache in seconds
  * @param {boolean} [config.varyOrigin=false] - Add Vary: Origin header for caching
+ * @param {boolean} [options.endHere=false] - If true, stops only pipeline flow per handler type after success.
  * @returns {Function} Middleware function that handles CORS headers
  *
  * @example
@@ -310,6 +311,76 @@ const cors = (config) => {
     };
 };
 exports.cors = cors;
+/**
+ * Middleware to authenticate a request.
+ *
+ * @template XContext - Additional context type to merge with CTXAuth.
+ * @param {Object} [options] - Configuration options.
+ * @param {ParseAuthFn}[options.parseAuth] - Function to extract authentication info from the request.
+ *   Should return an `Auth` object if valid, `Error` if invalid, or `null/undefined` if missing.
+ * @param {boolean} [options.endHere=false] - If true, stops only pipeline flow per handler type after success.
+ * @param {boolean} [options.checkOnly=false] - If true, only checks authentication without returning a response.
+ *
+ * @returns {FreeHandler<Partial<CTXAuth>&XContext>} A handler that sets `ctx.auth` if authentication succeeds,
+ *   otherwise returns a `401 Unauthorized` or with error message if available response (unless `checkOnly` is true).
+ */
+const authenticate = ({ parseAuth, endHere = false, checkOnly = false, }) => {
+    return function (req, ctx) {
+        var _a;
+        const auth = parseAuth(req, ctx);
+        if (!auth) {
+            return checkOnly ? false : (0, helpers_1.status)(401);
+        }
+        else if (auth instanceof Error) {
+            return checkOnly ? false : (0, helpers_1.status)(401, (_a = auth.message) !== null && _a !== void 0 ? _a : undefined);
+        }
+        ctx.auth = auth;
+        if (endHere)
+            return true;
+    };
+};
+exports.authenticate = authenticate;
+/**
+ * Middleware to authorize a request based on role or permissions.
+ *
+ * @template XContext - Additional context type to merge with CTXAuth.
+ * @param {Object} [options] - Configuration options.
+ * @param {(role: string) => boolean}[options.allowRole] - Function to check if a role is allowed.
+ * @param {(role: string) => boolean}[options.forbidRole] - Function to check if a role is forbidden.
+ * @param {string[]}[options.forPermissions] - List of permissions required for access.
+ * @param {(permission: string,role: string) => boolean|null|undefined}[options.hasPermission] - Function to check if a role has a given permission.
+ *   Required if `forPermissions` is provided.
+ * @param {boolean} [options.endHere=false] - If true, stops only pipeline flow per handler type after success.
+ *
+ * @returns {FreeHandler<Partial<CTXAuth>&XContext>} A handler that checks `ctx.auth` and enforces role/permission rules.
+ *   Returns `401 Unauthorized` if no auth is present, or `403 Forbidden` if checks fail.
+ *   Throws an error if `forPermissions` is set without `hasPermission`.
+ *
+ */
+const authorize = ({ allowRole, forbidRole, forPermissions, hasPermission, endHere = false, }) => {
+    if (forPermissions && !hasPermission) {
+        throw new Error("authorize middleware 'forPermissions' require 'hasPermission'");
+    }
+    return (req, { auth }) => {
+        if (!auth) {
+            return (0, helpers_1.status)(401);
+        }
+        if (allowRole && !allowRole(auth.role)) {
+            return (0, helpers_1.status)(403);
+        }
+        if (forbidRole && forbidRole(auth.role)) {
+            return (0, helpers_1.status)(403);
+        }
+        if (forPermissions && hasPermission) {
+            const permitted = forPermissions.some((permission) => hasPermission(permission, auth.role));
+            if (!permitted)
+                return (0, helpers_1.status)(403);
+        }
+        if (endHere)
+            return true;
+    };
+};
+exports.authorize = authorize;
 /**
  * Creates a Basic Authentication middleware.
  * Supports RFC 7617 Basic Authentication scheme.

@@ -49,16 +49,16 @@
 ## ✨ Features
 
 - ⚡ **High Performance** - Built on a radix tree for O(k) route matching (where k is path length)
-- 🎯 **Flexible Routing** - Support for path parameters, wildcards (`*`, `.*`, `**`, `.**`), and all HTTP methods
-- 🎭 **Multiple Handler Types** - Filters, hooks, handlers, fallbacks, and catchers
+- 🎯 **Flexible Routing Engine** - Support for path parameters, wildcards (`*`, `.*`, `**`, `.**`), and all HTTP methods
+- 🎭 **Multiple Handler Types** - Filters, hooks, afters, handlers, fallbacks, and catchers
 - 🔌 **Middleware Pipeline** - Chain multiple handlers with early exit capability
 - 🛡️ **Error Handling** - Built-in error catching with contextual error handlers
 - 🔄 **Method-Based Routing** - Separate routing trees for each HTTP method
-- 📦 **Local Dependencies** - Only @bepalo dependencies
+- 📦 **Local Dependencies** - Minimal Dependencies — Only internal @bepalo packages
 - 🌐 **Runtime Agnostic** - Works with Bun, Deno, Node.js, and other runtimes
 - 🔧 **TypeScript Ready** - Full type definitions included
-- 🧩 **Router Composition** - Append one router to another with a path prefix.
-- 🛠️ **Helper Functions** - Built-in response helpers (json, html, parseBody, upload, etc.)
+- 🧩 **Composable Router Architecture** - Append one router to another with a path prefix.
+- 🛠️ **Built-in Helper Utilities** - Built-in response helpers (json, html, parseBody, upload, etc.)
 - 🔐 **Middleware Integration** - CORS, rate limiting, authentication helpers
 
 ## 🚀 Get Started
@@ -226,7 +226,7 @@ router.filter(
 
 // Main route
 router.handle("GET /", () =>
-  html("<h1>Welcome! Enjoy using @beplao/router</h1>"),
+  html("<h1>Welcome! Enjoy using @bepalo/router</h1>"),
 );
 router.handle("GET /status", () => status(200));
 
@@ -351,7 +351,7 @@ Deno.serve(
 #### Nodejs
 
 ```js
-// Nodejs example. very slow
+// Node.js compatibility example (uses Fetch bridge; not optimized)
 http
   .createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host}`);
@@ -720,17 +720,20 @@ router.handle<CTXUpload>("POST /upload", [
 ```ts
 import {
   type CTXCookie,
-  parseCookie, // Cookie parser
   type CTXBody,
-  parseBody, // Body parser
+  type CTXAuth,
   type CTXUpload,
+  parseCookie, // Cookie parser
+  parseBody, // Body parser
   parseUploadStreaming, // multi-part-form-data and file upload stream parser
   cors, // CORS middleware
   limitRate, // Rate limiting
+  authenticate, // Generic authentication middleware
+  authorize, // Generic authorization middleware
   authBasic, // Basic authentication
   authAPIKey, // API key authentication
   authJWT, // JWT authentication
-} from "@bepalo/router/middlewares";
+} from "@bepalo/router";
 ```
 
 ### 🔧 Advanced Usage
@@ -851,13 +854,14 @@ The router uses a radix tree (trie) data structure for route matching, providing
 | Feature                         | @bepalo/router | Express | Hono | Fastify |
 | ------------------------------- | -------------- | ------- | ---- | ------- |
 | Radix Tree Routing              | ✅             | ❌      | ✅   | ✅      |
-| Few Dependencies                | ✅             | ❌      | ❌   | ❌      |
+| Few Dependencies                | ✅             | ❌      | ⚠️   | ⚠️      |
 | TypeScript Native               | ✅             | ❌      | ✅   | ✅      |
-| Extended Handler Phases         | ✅             | ⚠️      | ⚠️   | ⚠️      |
-| Built-in Middleware             | ✅             | ❌      | ✅   | ✅      |
-| Runtime Agnostic                | ✅             | ❌      | ✅   | ❌      |
+| Extended Handler Phases         | ✅             | ❌      | ❌   | ⚠️      |
+| Built-in Middleware             | ✅             | ⚠️      | ✅   | ✅      |
+| Runtime Agnostic                | ✅             | ❌      | ✅   | ⚠️      |
 | Router Composition              | ✅             | ✅      | ✅   | ✅      |
 | Structured Multi-Phase Pipeline | ✅             | ❌      | ❌   | ❌      |
+| Server                          | ❌             | ✅      | ⚠️   | ✅      |
 
 ## 📄 License
 

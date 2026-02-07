@@ -120,6 +120,7 @@ export declare const limitRate: <XContext = {}, Context extends RouterContext<XC
  * @param {boolean} [config.credentials=false] - Allow credentials (cookies, authorization headers)
  * @param {number} [config.maxAge=86400] - Maximum age for preflight cache in seconds
  * @param {boolean} [config.varyOrigin=false] - Add Vary: Origin header for caching
+ * @param {boolean} [options.endHere=false] - If true, stops only pipeline flow per handler type after success.
  * @returns {Function} Middleware function that handles CORS headers
  *
  * @example
@@ -158,6 +159,68 @@ export type CTXBasicAuth<prop extends string = "basicAuth"> = RouterContext<{
         role: string;
     } & Record<string, any>;
 }>;
+/**
+ * Represents an authenticated user.
+ */
+export interface Auth {
+    /** Unique identifier for the user */
+    id: string;
+    /** Role assigned to the user (e.g., "admin", "user") */
+    role: string;
+}
+/**
+ * Context extension that includes authentication information.
+ */
+export interface CTXAuth {
+    /** Authenticated user details */
+    auth: Auth;
+}
+/**
+ * auth context parser for authenticate middleware
+ */
+export type ParseAuthFn<XContext = {}> = (req: Request, ctx: RouterContext<Partial<CTXAuth> & XContext>) => Auth | Error | null | undefined;
+/**
+ * Middleware to authenticate a request.
+ *
+ * @template XContext - Additional context type to merge with CTXAuth.
+ * @param {Object} [options] - Configuration options.
+ * @param {ParseAuthFn}[options.parseAuth] - Function to extract authentication info from the request.
+ *   Should return an `Auth` object if valid, `Error` if invalid, or `null/undefined` if missing.
+ * @param {boolean} [options.endHere=false] - If true, stops only pipeline flow per handler type after success.
+ * @param {boolean} [options.checkOnly=false] - If true, only checks authentication without returning a response.
+ *
+ * @returns {FreeHandler<Partial<CTXAuth>&XContext>} A handler that sets `ctx.auth` if authentication succeeds,
+ *   otherwise returns a `401 Unauthorized` or with error message if available response (unless `checkOnly` is true).
+ */
+export declare const authenticate: <XContext = {}>({ parseAuth, endHere, checkOnly, }: {
+    parseAuth: ParseAuthFn<XContext>;
+    endHere?: boolean;
+    checkOnly?: boolean;
+}) => FreeHandler<Partial<CTXAuth> & XContext>;
+/**
+ * Middleware to authorize a request based on role or permissions.
+ *
+ * @template XContext - Additional context type to merge with CTXAuth.
+ * @param {Object} [options] - Configuration options.
+ * @param {(role: string) => boolean}[options.allowRole] - Function to check if a role is allowed.
+ * @param {(role: string) => boolean}[options.forbidRole] - Function to check if a role is forbidden.
+ * @param {string[]}[options.forPermissions] - List of permissions required for access.
+ * @param {(permission: string,role: string) => boolean|null|undefined}[options.hasPermission] - Function to check if a role has a given permission.
+ *   Required if `forPermissions` is provided.
+ * @param {boolean} [options.endHere=false] - If true, stops only pipeline flow per handler type after success.
+ *
+ * @returns {FreeHandler<Partial<CTXAuth>&XContext>} A handler that checks `ctx.auth` and enforces role/permission rules.
+ *   Returns `401 Unauthorized` if no auth is present, or `403 Forbidden` if checks fail.
+ *   Throws an error if `forPermissions` is set without `hasPermission`.
+ *
+ */
+export declare const authorize: <XContext = {}>({ allowRole, forbidRole, forPermissions, hasPermission, endHere, }: {
+    allowRole?: (role: string) => boolean;
+    forbidRole?: (role: string) => boolean;
+    forPermissions?: string[];
+    hasPermission?: (permission: string, role: string) => boolean | null | undefined;
+    endHere?: boolean;
+}) => FreeHandler<Partial<CTXAuth> & XContext>;
 /**
  * Creates a Basic Authentication middleware.
  * Supports RFC 7617 Basic Authentication scheme.
