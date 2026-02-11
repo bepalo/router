@@ -18,4 +18,5 @@ __exportStar(require("./types"), exports);
 __exportStar(require("./router"), exports);
 __exportStar(require("./helpers"), exports);
 __exportStar(require("./middlewares"), exports);
+__exportStar(require("./framework"), exports);
 //# sourceMappingURL=index.js.map

@@ -8,9 +8,17 @@ Generated on: 2026-02-11
 
 <!-- Newest first (most recent → oldest) -->
 
+## v1.8.23 — 2026-02-11
+
+- **Hash:** TBA
+- **Author:** Natnael Eshetu
+- **Changes:** v1.8.23 framework
+  - implement file based routing framework
+  - add docs for framework
+
 ## v1.6.22 — 2026-02-11
 
-- **Hash:** 88bed653bc11a40b683cd1693db00f679170c622
+- **Hash:** 02b01a3793cd4b73f60028d1cc3fa55e7b2e5cbc
 - **Author:** Natnael Eshetu
 - **Changes:** v1.7.22 enhancement +fix
   - add url instance to router context
