@@ -296,7 +296,8 @@ class Router {
     }
     /**
      * Appends routes from another router under a base URL.
-     * Useful for mounting sub-routers or organizing routes by prefix.
+     * But does not merge router configurations.
+     * Useful for organizing routes by prefix.
      * @param {`/${string}`} baseUrl - The base URL to mount the router under
      * @param {Router<Context>} router - The router to append
      * @param {HandlerOptions} [options] - Registration options

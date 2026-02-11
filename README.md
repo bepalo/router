@@ -4,7 +4,8 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/bepalo/router/ci.yaml?label=ci)](https://github.com/bepalo/router/actions/workflows/ci.yaml)
 [![tests](https://img.shields.io/github/actions/workflow/status/bepalo/router/testing.yaml?label=tests)](https://github.com/bepalo/router/actions/workflows/testing.yaml)
 [![license](https://img.shields.io/npm/l/@bepalo/router.svg)](LICENSE)
-![Benchmarked](https://img.shields.io/badge/benchmarked-yes-green)
+
+<!-- ![Benchmarked](https://img.shields.io/badge/benchmarked-yes-green) -->
 
 [![Vitest](https://img.shields.io/badge/vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](test-result.md)
 
@@ -457,6 +458,7 @@ interface RouterConfig<Context extends RouterContext> {
   defaultCatcher?: Handler<Context>; // Global error handler
   defaultFallback?: Handler<Context>; // Global fallback handler
   enable?: HandlerEnable; // Handler types enable/disable
+  normalizeTrailingSlash?: boolean; // treat '/abc/' and '/abc' as the same
 }
 ```
 
@@ -519,7 +521,7 @@ interface HandlerOptions {
 #### Router Composition
 
 ```ts
-// Append another router with a prefix
+// Append another router with a prefix. Does not merge router configurations
 router.append(
   baseUrl: `/${string}`,
   router: Router<Context>,
