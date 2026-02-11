@@ -1,7 +1,20 @@
 import type { RouterContext } from "./router";
-import type { FreeHandler, Handler, HttpMethod, CTXAddress } from "./types";
+import type { FreeHandler, HttpMethod, CTXAddress } from "./types";
 import { CacheConfig } from "@bepalo/cache";
 import { JWT, JwtPayload, JwtVerifyOptions } from "@bepalo/jwt";
+/**
+ * Context object containing parsed query.
+ * @typedef {Object} CTXQuery
+ * @property {Record<string, string>} query - Parsed query from the request url
+ */
+export type CTXQuery = {
+    query: Record<string, string>;
+};
+/**
+ * Creates middleware that parses queries from the request url and adds them to the context.
+ * @returns {Function} A middleware function that adds parsed queries to context.query
+ */
+export declare const parseQuery: <XContext = {}>() => FreeHandler<XContext & CTXQuery>;
 /**
  * Context object containing parsed cookies.
  * @typedef {Object} CTXCookie
@@ -13,11 +26,8 @@ export type CTXCookie = {
 /**
  * Creates middleware that parses cookies from the request and adds them to the context.
  * @returns {Function} A middleware function that adds parsed cookies to context.cookie
- * @example
- * const cookieParser = parseCookie();
- * // Use in respondWith: respondWith({}, cookieParser(), ...otherHandlers)
  */
-export declare const parseCookie: <Context extends CTXCookie>() => FreeHandler<Context>;
+export declare const parseCookie: <XContext = {}>() => FreeHandler<XContext & CTXCookie>;
 /**
  * Parsed body object types.
  * @typedef {Object} ParsedBody
@@ -53,12 +63,12 @@ export type SupportedBodyMediaTypes = "application/x-www-form-urlencoded" | "app
  * @throws {Response} Returns a 413 response if body exceeds maxSize
  * @throws {Response} Returns a 400 response if body is malformed
  */
-export declare const parseBody: <Context extends CTXBody>(options?: {
+export declare const parseBody: <XContext = {}>(options?: {
     accept?: SupportedBodyMediaTypes | SupportedBodyMediaTypes[];
     maxSize?: number;
     once?: boolean;
     clone?: boolean;
-}) => FreeHandler<Context>;
+}) => FreeHandler<XContext & CTXBody>;
 /**
  * Creates a rate limiting middleware using token bucket algorithm.
  * Supports both fixed interval refill and continuous rate-based refill.
@@ -96,8 +106,8 @@ export declare const parseBody: <Context extends CTXBody>(options?: {
  *
  * @throws {Error} If neither refillInterval nor refillRate is provided
  */
-export declare const limitRate: <XContext = {}, Context extends RouterContext<XContext & CTXAddress> = RouterContext<XContext & CTXAddress>>(config: {
-    key: (req: Request, ctx: Context) => string;
+export declare const limitRate: <XContext = {}>(config: {
+    key: (req: Request, ctx: RouterContext<XContext & CTXAddress>) => string;
     refillInterval?: number;
     refillRate?: number;
     maxTokens: number;
@@ -106,7 +116,7 @@ export declare const limitRate: <XContext = {}, Context extends RouterContext<XC
     cacheConfig?: CacheConfig<string, any>;
     setXRateLimitHeaders?: boolean;
     endHere?: boolean;
-}) => Handler<Context>;
+}) => FreeHandler<XContext & CTXAddress>;
 /**
  * Creates a CORS (Cross-Origin Resource Sharing) middleware.
  * Supports preflight requests and configurable CORS headers.
@@ -138,7 +148,7 @@ export declare const limitRate: <XContext = {}, Context extends RouterContext<XC
  *
  * @throws {Error} If credentials is true with wildcard origin ("*")
  */
-export declare const cors: <XContext = {}, Context extends RouterContext<XContext> = RouterContext<XContext>>(config?: {
+export declare const cors: <XContext = {}>(config?: {
     origins: "*" | string | string[];
     methods?: HttpMethod[] | null;
     allowedHeaders?: string[] | null;
@@ -147,7 +157,7 @@ export declare const cors: <XContext = {}, Context extends RouterContext<XContex
     maxAge?: number | null;
     varyOrigin?: boolean;
     endHere?: boolean;
-}) => Handler<Context>;
+}) => FreeHandler<XContext>;
 /**
  * Context type for Basic Authentication middleware.
  * @template {string} [prop="basicAuth"] - Property name to store auth data in context
@@ -247,16 +257,17 @@ export declare const authorize: <XContext = {}>({ allowRole, forbidRole, forPerm
  *   ctxProp: "user" // Store in ctx.user instead of ctx.basicAuth
  * });
  */
-export declare const authBasic: <Context extends CTXBasicAuth, prop extends string = "basicAuth">({ credentials, type, separator, realm, ctxProp, endHere, }: {
+export declare const authBasic: <XContext extends CTXBasicAuth, prop extends string = "basicAuth">({ credentials, type, separator, realm, ctxProp, endHere, }: {
     credentials: Map<string, {
         password: string;
+        role: string;
     } & Record<string, any>>;
     type?: "raw" | "base64";
     separator?: ":" | " ";
     realm?: string;
     ctxProp?: prop;
     endHere?: boolean;
-}) => Handler<Context>;
+}) => FreeHandler<XContext & CTXBasicAuth>;
 /**
  * Context type for API Key Authentication middleware.
  * @template {string} [prop="apiKeyAuth"] - Property name to store auth data in context
@@ -299,11 +310,11 @@ export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext<{
  *   }
  * });
  */
-export declare const authAPIKey: <Context extends CTXAPIKeyAuth, prop extends string = "apiKeyAuth">({ verify, ctxProp, endHere, }: {
+export declare const authAPIKey: <XContext extends CTXAPIKeyAuth, prop extends string = "apiKeyAuth">({ verify, ctxProp, endHere, }: {
     verify: (apiKey: string) => boolean;
     ctxProp?: prop;
     endHere?: boolean;
-}) => Handler<Context>;
+}) => FreeHandler<XContext & CTXAPIKeyAuth>;
 /**
  * Context type for JWT Authentication middleware.
  * @template {JwtPayload<{}>} Payload - JWT payload type
@@ -365,11 +376,11 @@ export type CTXJWTAuth<Payload extends JwtPayload<{}>, prop extends string = "jw
  *   }
  * });
  */
-export declare const authJWT: <Payload extends JwtPayload<{}>, Context extends CTXJWTAuth<Payload, prop>, prop extends string = "jwtAuth">({ jwt, validate, verifyOptions, ctxProp, endHere, }: {
+export declare const authJWT: <Payload extends JwtPayload<{}>, XContext extends CTXJWTAuth<Payload, prop>, prop extends string = "jwtAuth">({ jwt, validate, verifyOptions, ctxProp, endHere, }: {
     jwt: JWT<Payload>;
     validate?: (payload: Payload) => boolean;
     verifyOptions?: JwtVerifyOptions;
     ctxProp?: prop;
     endHere?: boolean;
-}) => Handler<Context>;
+}) => FreeHandler<XContext & CTXJWTAuth<Payload>>;
 //# sourceMappingURL=middlewares.d.ts.map

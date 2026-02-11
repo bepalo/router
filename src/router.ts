@@ -83,6 +83,7 @@ type RouteNode<Context = {}> = {
  * @property {boolean} found.catchers - Whether any catchers were found
  */
 export type RouterContext<XContext = {}> = {
+  url: URL;
   params: Record<string, string>;
   headers: Headers;
   response?: Response;
@@ -148,6 +149,7 @@ export interface RouterConfig<Context extends RouterContext = RouterContext> {
   defaultCatcher?: Handler<Context & CTXError>;
   defaultFallback?: Handler<Context>;
   enable?: HandlerEnable;
+  normalizeTrailingSlash?: boolean;
 }
 
 /**
@@ -224,9 +226,10 @@ export class Router<
   #defaultHeaders: Array<HeaderTuple> | { (): Array<HeaderTuple> } = [];
   #defaultCatcher?: Handler<Context & CTXError>;
   #defaultFallback?: Handler<Context>;
+  #normalizeTrailingSlash: boolean = false;
   #setters: Set<HandlerSetter<Context>> = new Set();
 
-  static #ALL_METHOD_PATHS = splitUrl([
+  static #ALL_METHOD_PATHS: MethodPath[] = [
     "HEAD /.**",
     "OPTIONS /.**",
     "GET /.**",
@@ -234,7 +237,7 @@ export class Router<
     "PUT /.**",
     "PATCH /.**",
     "DELETE /.**",
-  ]);
+  ];
 
   /**
    * Gets the routing trees for all handler types.
@@ -282,6 +285,14 @@ export class Router<
   }
 
   /**
+   * Gets the current configuration to normalize trailing slash.
+   * @returns {boolean}
+   */
+  get normalizeTrailingSlash(): boolean {
+    return this.#normalizeTrailingSlash;
+  }
+
+  /**
    * Gets the route registration history.
    * @returns {Set<HandlerSetter<Context>>}
    */
@@ -306,6 +317,9 @@ export class Router<
     }
     if (config?.defaultFallback) {
       this.#defaultFallback = config.defaultFallback;
+    }
+    if (config?.normalizeTrailingSlash) {
+      this.#normalizeTrailingSlash = config.normalizeTrailingSlash;
     }
   }
 
@@ -539,10 +553,12 @@ export class Router<
       Array.isArray(pipeline_)
         ? pipeline_
         : ([pipeline_] as Pipeline<Context> | Pipeline<Context & CTXError>);
-    const splitUrls = urls === "*" ? Router.#ALL_METHOD_PATHS : splitUrl(urls);
+    const splitUrls = this.#splitUrl(
+      urls === "*" ? Router.#ALL_METHOD_PATHS : urls,
+    );
     for (const { method, nodes, params, pathname } of splitUrls) {
       const treeNode = this.#trees[handlerType][method];
-      const splitPaths = pathname.substring(1).split("/");
+      const splitPaths = this.#normalizePathname(pathname);
       const splitPathsLength_1 = splitPaths.length - 1;
       for (let i = 0; i < splitPathsLength_1; i++) {
         switch (splitPaths[i]) {
@@ -563,22 +579,22 @@ export class Router<
       if (!options?.overwrite) {
         const node = treeNode.get(splitPaths);
         if (node) {
-          const maxLen = Math.min(node.nodes.length, splitPaths.length);
-          const colliding: number[] = [];
+          const maxLen = Math.max(node.nodes.length, splitPaths.length);
+          let colliding: number | null = null;
           for (let i = 0; i < maxLen; i++) {
             if (node.nodes[i] === "*") {
               if (splitPaths[i].startsWith(":") || splitPaths[i] === "*") {
-                colliding.unshift(i);
+                colliding = i;
               } else {
                 break;
               }
             } else if (node.nodes[i] === splitPaths[i]) {
-              colliding.unshift(i);
+              colliding = i;
             }
           }
-          if (colliding.length > 0 && colliding[0] === maxLen - 1) {
+          if (colliding != null && colliding === maxLen - 1) {
             throw new Error(
-              `Overriding route '${node.pathname}' with '${pathname}'`,
+              `Overriding route ${method} '${node.pathname}' with '${pathname}'`,
             );
           }
         }
@@ -609,7 +625,10 @@ export class Router<
    * @param {Partial<Context>} [context] - Initial context object
    * @returns {Promise<Response>} The HTTP response
    */
-  async respond(req: Request, context?: Partial<Context>): Promise<Response> {
+  async respond(
+    req: Request,
+    context?: Partial<Omit<Context, "url" | "error" | "found" | "response">>,
+  ): Promise<Response> {
     const method = req.method as HttpMethod;
     if (!isValidHttpMethod(method)) {
       return new Response("Method Not Allowed", {
@@ -620,14 +639,7 @@ export class Router<
     }
     let response: void | boolean | Response = undefined;
     const url = new URL(req.url);
-    const key = url.pathname
-      .substring(
-        1,
-        url.pathname !== "/" && url.pathname.endsWith("/")
-          ? url.pathname.length - 1
-          : url.pathname.length,
-      )
-      .split("/");
+    const key = this.#normalizePathname(url.pathname);
     const hookNodes = this.enabled.hooks
       ? this.#trees.hook[method].getAll(key)
       : (emptyArray as RouteNode<Context>[]);
@@ -655,11 +667,13 @@ export class Router<
       catchers: catcherNodes.length > 0,
     };
     const ctx = {
+      url,
       params: context?.params ?? {},
       headers: context?.headers ?? new Headers(this.defaultHeaders),
       found,
       ...context,
     } as Context;
+    const reqCtx: [req: Request, ctx: RouterContext<Context>] = [req, ctx];
     try {
       // hooks
       if (found.hooks) {
@@ -672,9 +686,9 @@ export class Router<
         let hookResponse: void | boolean | Response = undefined;
         for (const hookNode of hookNodes) {
           for (const hook of hookNode.pipeline) {
-            hookResponse = await (hook as BoundHandler<Context>).bind(this)(
-              req,
-              ctx,
+            hookResponse = await (hook as BoundHandler<Context>).apply(
+              this,
+              reqCtx,
             );
             if (hookResponse) break;
           }
@@ -691,9 +705,9 @@ export class Router<
         }
         for (const filterNode of filterNodes) {
           for (const filter of filterNode.pipeline) {
-            response = await (filter as BoundHandler<Context>).bind(this)(
-              req,
-              ctx,
+            response = await (filter as BoundHandler<Context>).apply(
+              this,
+              reqCtx,
             );
             if (response) break;
           }
@@ -711,9 +725,9 @@ export class Router<
         if (!(response instanceof Response)) {
           for (const handlerNode of handlerNodes) {
             for (const handler of handlerNode.pipeline) {
-              response = await (handler as BoundHandler<Context>).bind(this)(
-                req,
-                ctx,
+              response = await (handler as BoundHandler<Context>).apply(
+                this,
+                reqCtx,
               );
               if (response) break;
             }
@@ -732,9 +746,9 @@ export class Router<
           }
           for (const fallbackNode of fallbackNodes) {
             for (const fallback of fallbackNode.pipeline) {
-              response = await (fallback as BoundHandler<Context>).bind(this)(
-                req,
-                ctx,
+              response = await (fallback as BoundHandler<Context>).apply(
+                this,
+                reqCtx,
               );
               if (response) break;
             }
@@ -753,7 +767,6 @@ export class Router<
           }
         }
       }
-      if (response instanceof Response) ctx.response = response;
       response =
         (typeof response === "boolean" ? null : response) ??
         (found.handlers || found.fallbacks
@@ -767,6 +780,9 @@ export class Router<
               statusText: "Not Found",
               headers: ctx.headers,
             }));
+      if (response instanceof Response) {
+        ctx.response = response;
+      }
       // after response handlers
       if (found.afters) {
         const params = afterNodes[0].params;
@@ -778,9 +794,9 @@ export class Router<
         let afterResponse: void | boolean | Response = undefined;
         for (const afterNode of afterNodes) {
           for (const after of afterNode.pipeline) {
-            afterResponse = await (after as BoundHandler<Context>).bind(this)(
-              req,
-              ctx,
+            afterResponse = await (after as BoundHandler<Context>).apply(
+              this,
+              reqCtx,
             );
             if (afterResponse) break;
           }
@@ -791,25 +807,41 @@ export class Router<
       // error handlers
       ctx.error = error instanceof Error ? error : new Error(String(error));
       if (found.catchers) {
-        const params = catcherNodes[0].params;
-        if (params) {
-          for (const [index, param] of params) {
-            ctx.params[param.name] = key[index];
+        try {
+          const params = catcherNodes[0].params;
+          if (params) {
+            for (const [index, param] of params) {
+              ctx.params[param.name] = key[index];
+            }
           }
-        }
-        for (const catcherNode of catcherNodes) {
-          for (const catcher of catcherNode.pipeline) {
-            response = await (catcher as BoundHandler<Context>).bind(this)(
+          for (const catcherNode of catcherNodes) {
+            for (const catcher of catcherNode.pipeline) {
+              response = await (catcher as BoundHandler<Context>).apply(
+                this,
+                reqCtx,
+              );
+              if (response) break;
+            }
+            if (response) break;
+          }
+        } catch (error) {
+          ctx.error = error instanceof Error ? error : new Error(String(error));
+          if (this.#defaultCatcher) {
+            response = await this.#defaultCatcher(
               req,
               ctx as Context & CTXError,
             );
-            if (response) break;
+            if (response instanceof Response) {
+              ctx.response = response;
+            }
           }
-          if (response) break;
         }
       }
-      if (!(response instanceof Response) && this.#defaultCatcher) {
+      if (this.#defaultCatcher && !(response instanceof Response)) {
         response = await this.#defaultCatcher(req, ctx as Context & CTXError);
+        if (response instanceof Response) {
+          ctx.response = response;
+        }
       }
       if (!(response instanceof Response)) {
         response = new Response("Internal Server Error", {
@@ -817,9 +849,96 @@ export class Router<
           statusText: "Internal Server Error",
           headers: ctx.headers,
         });
+        ctx.response = response;
       }
     }
     return response;
+  }
+
+  #normalizePathname(pathname: string): string[] {
+    return (
+      this.#normalizeTrailingSlash
+        ? pathname.length > 1
+          ? pathname.substring(
+              1,
+              pathname.endsWith("/") ? pathname.length - 1 : pathname.length,
+            )
+          : pathname.substring(1)
+        : pathname.substring(1)
+    ).split("/");
+  }
+
+  /**
+   * Splits URL patterns into their components for routing.
+   * Supports wildcards (*), super-globs (**), and parameters (:param).
+   * @param {MethodPath|Array<MethodPath>} urls - URL patterns to split
+   * @returns {Array<SplitURL>} Array of split URL components
+   * @private
+   * @example
+   * // Returns: [{ method: 'GET', pathname: '/users/:id', nodes: ['users', '*'], params: Map({1: {name: 'id', index: 1}}) }]
+   * splitUrl(["GET /users/:id"]);
+   */
+  #splitUrl(urls: MethodPath | Array<MethodPath>): Array<SplitURL> {
+    urls = (Array.isArray(urls) ? urls : [urls]) as Array<MethodPath>;
+    let splitUrls: Array<SplitURL> = [];
+    for (const mp of urls) {
+      const [_method, pathname] = mp
+        .split(" ", 2)
+        .map((mu: string) => mu.trim()) as [
+        HttpMethod | "ALL" | "CRUD",
+        HttpPath,
+      ];
+      const methods =
+        _method === "ALL"
+          ? ALL_METHODS
+          : _method === "CRUD"
+            ? CRUD_METHODS
+            : [_method];
+      const pathNodes = this.#normalizePathname(pathname);
+      for (const method of methods) {
+        const params: Map<number, { name: string; index: number }> = new Map();
+        const nodes: Array<string> = [];
+        const lastPathNode =
+          pathNodes.length > 0 && pathNodes[pathNodes.length - 1];
+        // check the last path node to match globs '.**'
+        if (lastPathNode === ".**") {
+          const curNodes = pathNodes.slice(0, pathNodes.length - 1);
+          splitUrls.push({ method, pathname, nodes: [...curNodes], params });
+          splitUrls.push({
+            method,
+            pathname,
+            nodes: [...curNodes, "**"],
+            params,
+          });
+        } else if (lastPathNode === ".*") {
+          const curNodes = pathNodes.splice(0, pathNodes.length - 1);
+          splitUrls.push({ method, pathname, nodes: [...curNodes], params });
+          splitUrls.push({
+            method,
+            pathname,
+            nodes: [...curNodes, "*"],
+            params,
+          });
+        } else {
+          // process the path nodes
+          for (let index = 0; index < pathNodes.length; index++) {
+            const pathNode = pathNodes[index];
+            if (pathNode === ".**" && index < pathNodes.length - 1) {
+              throw new Error("Super-Glob not at the end of pathname");
+            }
+            if (pathNode.startsWith(":")) {
+              const name = pathNode.substring(1);
+              params.set(index, { name, index });
+              nodes.push("*");
+            } else {
+              nodes.push(pathNode);
+            }
+          }
+          splitUrls.push({ method, pathname, nodes, params });
+        }
+      }
+    }
+    return splitUrls;
   }
 }
 
@@ -853,73 +972,5 @@ export const CRUD_METHODS: HttpMethod[] = [
   "PATCH",
   "DELETE",
 ];
-
-/**
- * Splits URL patterns into their components for routing.
- * Supports wildcards (*), super-globs (**), and parameters (:param).
- * @param {MethodPath|Array<MethodPath>} urls - URL patterns to split
- * @returns {Array<SplitURL>} Array of split URL components
- * @private
- * @example
- * // Returns: [{ method: 'GET', pathname: '/users/:id', nodes: ['users', '*'], params: Map({1: {name: 'id', index: 1}}) }]
- * splitUrl(["GET /users/:id"]);
- */
-function splitUrl(urls: MethodPath | Array<MethodPath>): Array<SplitURL> {
-  urls = (Array.isArray(urls) ? urls : [urls]) as Array<MethodPath>;
-  let splitUrls: Array<SplitURL> = [];
-  for (const mp of urls) {
-    const [_method, pathname] = mp
-      .split(" ", 2)
-      .map((mu: string) => mu.trim()) as [
-      HttpMethod | "ALL" | "CRUD",
-      HttpPath,
-    ];
-    const params: Map<number, { name: string; index: number }> = new Map();
-    const nodes: Array<string> = [];
-    const pathNodes = pathname.substring(1).split("/");
-    const lastPathNode =
-      pathNodes.length > 0 && pathNodes[pathNodes.length - 1];
-    const methods =
-      _method === "ALL"
-        ? ALL_METHODS
-        : _method === "CRUD"
-          ? CRUD_METHODS
-          : [_method];
-    for (const method of methods) {
-      // check the last path node to match globs '.**'
-      if (lastPathNode === ".**") {
-        const curNodes = pathNodes.slice(0, pathNodes.length - 1);
-        splitUrls.push({ method, pathname, nodes: [...curNodes, ""], params });
-        splitUrls.push({
-          method,
-          pathname,
-          nodes: [...curNodes, "**"],
-          params,
-        });
-      } else if (lastPathNode === ".*") {
-        const curNodes = pathNodes.splice(0, pathNodes.length - 1);
-        splitUrls.push({ method, pathname, nodes: [...curNodes, ""], params });
-        splitUrls.push({ method, pathname, nodes: [...curNodes, "*"], params });
-      } else {
-        // process the path nodes
-        for (let index = 0; index < pathNodes.length; index++) {
-          const pathNode = pathNodes[index];
-          if (pathNode === ".**" && index < pathNodes.length - 1) {
-            throw new Error("Super-Glob not at the end of pathname");
-          }
-          if (pathNode.startsWith(":")) {
-            const name = pathNode.substring(1);
-            params.set(index, { name, index });
-            nodes.push("*");
-          } else {
-            nodes.push(pathNode);
-          }
-        }
-        splitUrls.push({ method, pathname, nodes, params });
-      }
-    }
-  }
-  return splitUrls;
-}
 
 export default Router;

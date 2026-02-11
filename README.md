@@ -14,16 +14,6 @@
 
 Please refer to the [change-log](CHANGELOG.md).
 
-Added `ALL` and `CRUD` shortcuts to method-path definition.
-
-```js
-router.handle("ALL /.**", ...); // HEAD|OPTIONS|GET|POST|PUT|PATCH|DELETE
-router.handle("CRUD /api/.**", ...); // GET|POST|PUT|PATCH|DELETE
-// instead of
-router.handle(["HEAD /", "OPTIONS /", ...], ...); // "ALL /"
-router.handle(["GET /api", "POST /api", ...], ...); // "CRUD /api"
-```
-
 ## 📑 Table of Contents
 
 1. [🏆 @bepalo/router](#-bepalorouter)
@@ -74,6 +64,7 @@ router.handle(["GET /api", "POST /api", ...], ...); // "CRUD /api"
 - 🧩 **Composable Router Architecture** - Append one router to another with a path prefix.
 - 🛠️ **Built-in Helper Utilities** - Built-in response helpers (json, html, parseBody, upload, etc.)
 - 🔐 **Middleware Integration** - CORS, rate limiting, authentication helpers
+- 🔐 **Normalized pathname option** - An option to normalize pathnames.
 
 ## 🚀 Get Started
 
@@ -234,6 +225,10 @@ router.handle("GET /", () =>
   html("<h1>Welcome! Enjoy using @bepalo/router</h1>"),
 );
 router.handle("GET /status", () => status(200));
+
+// trailing slash matters unless normalizeTrailingSlash option is set
+router.handle("GET /res/", () => text("/res/"));
+router.handle("GET /res", () => text("/res"));
 
 // Sample sub-route `/api/user`
 ////////////////////////////////////////

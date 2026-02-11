@@ -9,16 +9,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authJWT = exports.authAPIKey = exports.authBasic = exports.authorize = exports.authenticate = exports.cors = exports.limitRate = exports.parseBody = exports.parseCookie = void 0;
+exports.authJWT = exports.authAPIKey = exports.authBasic = exports.authorize = exports.authenticate = exports.cors = exports.limitRate = exports.parseBody = exports.parseCookie = exports.parseQuery = void 0;
 const helpers_1 = require("./helpers");
 const cache_1 = require("@bepalo/cache");
 const time_1 = require("@bepalo/time");
 /**
+ * Creates middleware that parses queries from the request url and adds them to the context.
+ * @returns {Function} A middleware function that adds parsed queries to context.query
+ */
+const parseQuery = () => {
+    return (req, ctx) => {
+        const query = Object.fromEntries(ctx.url.searchParams.entries());
+        ctx.query = query;
+    };
+};
+exports.parseQuery = parseQuery;
+/**
  * Creates middleware that parses cookies from the request and adds them to the context.
  * @returns {Function} A middleware function that adds parsed cookies to context.cookie
- * @example
- * const cookieParser = parseCookie();
- * // Use in respondWith: respondWith({}, cookieParser(), ...otherHandlers)
  */
 const parseCookie = () => {
     return (req, ctx) => {
@@ -416,18 +424,20 @@ const authBasic = ({ credentials, type = "raw", separator = ":", realm = "Protec
         const [scheme, creds] = authorization.split(" ", 2);
         if (scheme.toLowerCase() !== "basic" || !creds)
             return (0, helpers_1.status)(401);
-        let xcreds;
-        try {
-            xcreds = type === "base64" ? atob(creds) : creds;
-        }
-        catch (_a) {
-            return (0, helpers_1.status)(401);
+        let xcreds = creds;
+        if (type === "base64") {
+            try {
+                xcreds = atob(creds);
+            }
+            catch (_a) {
+                return (0, helpers_1.status)(401);
+            }
         }
         const [username, password] = xcreds.split(separator, 2);
         if (!username || !password)
             return (0, helpers_1.status)(401);
         const user = credentials.get(username);
-        if (!user || password !== user.pass)
+        if (!user || password !== user.password)
             return (0, helpers_1.status)(401);
         ctx[ctxProp] = {
             username,

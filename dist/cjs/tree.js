@@ -45,29 +45,28 @@ class Tree {
         _Tree_root.set(this, void 0);
     }
     getAll(key) {
-        var _a, _b, _c;
+        var _a;
         let node = __classPrivateFieldGet(this, _Tree_root, "f");
         const values = [];
         const klen_1 = key.length - 1;
         for (let i = 0; i < key.length && node != null; i++) {
             const keyPart = key[i];
-            if (keyPart !== "") {
-                const glob = node.children.get("**");
-                if ((glob === null || glob === void 0 ? void 0 : glob.value) != null) {
-                    values.unshift(glob.value);
-                }
+            const superGlob = node.children.get("**");
+            if ((superGlob === null || superGlob === void 0 ? void 0 : superGlob.value) != null) {
+                values.unshift(superGlob.value);
             }
             if (i < klen_1) {
-                let nextNode = node.children.get(keyPart || "*");
-                if (nextNode == null || nextNode.children.size === 0) {
+                let nextNode = node.children.get(keyPart);
+                if (nextNode == null) {
                     nextNode = node.children.get("*");
                 }
                 node = nextNode;
             }
             else {
-                const value = !keyPart
-                    ? node.value
-                    : ((_b = (_a = node.children.get(keyPart)) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : (_c = node.children.get("*")) === null || _c === void 0 ? void 0 : _c.value);
+                const glob = node.children.get("*");
+                if (glob === null || glob === void 0 ? void 0 : glob.value)
+                    values.unshift(glob.value);
+                const value = (_a = node.children.get(keyPart)) === null || _a === void 0 ? void 0 : _a.value;
                 if (value)
                     values.unshift(value);
                 break;
@@ -82,16 +81,14 @@ class Tree {
         for (let i = 0; i < key.length && node != null; i++) {
             const keyPart = key[i];
             if (i < klen_1) {
-                let nextNode = node.children.get(keyPart || "*");
+                let nextNode = node.children.get(keyPart);
                 if (nextNode == null) {
                     nextNode = node.children.get("*");
                 }
                 node = nextNode;
             }
             else {
-                const value = !keyPart
-                    ? node.value
-                    : ((_b = (_a = node.children.get(keyPart)) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : (_c = node.children.get("*")) === null || _c === void 0 ? void 0 : _c.value);
+                const value = (_b = (_a = node.children.get(keyPart)) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : (_c = node.children.get("*")) === null || _c === void 0 ? void 0 : _c.value;
                 return value;
             }
         }
@@ -104,14 +101,14 @@ class Tree {
         for (let i = 0; i < key.length && node != null; i++) {
             const keyPart = key[i];
             if (i < klen_1) {
-                let nextNode = node.children.get(keyPart || "*");
+                let nextNode = node.children.get(keyPart);
                 if (nextNode == null) {
                     nextNode = node.children.get("*");
                 }
                 node = nextNode;
             }
             else {
-                return !keyPart ? !!node.value : !!((_a = node.children.get(keyPart)) === null || _a === void 0 ? void 0 : _a.value);
+                return ((_a = node.children.get(keyPart)) === null || _a === void 0 ? void 0 : _a.value) != null;
             }
         }
         return false;
@@ -124,7 +121,7 @@ class Tree {
         const klen_1 = key.length - 1;
         for (let i = 0; i < key.length; i++) {
             if (i < klen_1) {
-                const keyPart = key[i] || "*";
+                const keyPart = key[i];
                 const curNode = node.children.get(keyPart);
                 if (!curNode) {
                     const newNode = new TreeNode();
@@ -137,20 +134,15 @@ class Tree {
             }
             else {
                 const keyPart = key[i];
-                if (!keyPart) {
-                    node.value = value;
+                const curNode = node.children.get(keyPart);
+                if (!curNode) {
+                    const newNode = new TreeNode(value);
+                    node.children.set(keyPart, newNode);
+                    node = newNode;
                 }
                 else {
-                    const curNode = node.children.get(keyPart);
-                    if (!curNode) {
-                        const newNode = new TreeNode(value);
-                        node.children.set(keyPart, newNode);
-                        node = newNode;
-                    }
-                    else {
-                        curNode.value = value;
-                        node = curNode;
-                    }
+                    curNode.value = value;
+                    node = curNode;
                 }
             }
         }
