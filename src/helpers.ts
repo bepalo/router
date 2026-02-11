@@ -254,7 +254,7 @@ export function getHttpStatusText(code: number): string {
 
 /**
  * Creates a Response with the specified status code.
- * Defaults to text/plain content-type if not provided in init.headers.
+ * Defaults to 'text/plain; charset=utf-8' content-type if not provided in init.headers.
  * @param {number} status - The HTTP status code
  * @param {string|null} [content] - The response body content
  * @param {ResponseInit} [init] - Additional response initialization options
@@ -272,7 +272,7 @@ export const status = (
   const statusText = init?.statusText ?? getHttpStatusText(status);
   const headers = new Headers(init?.headers);
   if (content !== null && !headers.has("content-type")) {
-    headers.set("content-type", "text/plain");
+    headers.set("content-type", "text/plain; charset=utf-8");
   }
   return new Response(content !== undefined ? content : statusText, {
     statusText,
@@ -338,7 +338,7 @@ export const forward = <XContext = {}>(
 
 /**
  * Creates a text/plain Response.
- * Defaults to status 200 and text/plain content-type if not specified.
+ * Defaults to status 200 and 'text/plain; charset=utf-8' content-type if not specified.
  * @param {string} content - The text content to return
  * @param {ResponseInit} [init] - Additional response initialization options
  * @returns {Response} A Response object with text/plain content-type
@@ -351,7 +351,7 @@ export const text = (content: string, init?: ResponseInit): Response => {
   const statusText = init?.statusText ?? getHttpStatusText(status);
   const headers = new Headers(init?.headers);
   if (!headers.has("content-type")) {
-    headers.set("content-type", "text/plain");
+    headers.set("content-type", "text/plain; charset=utf-8");
   }
   return new Response(content, {
     statusText,
@@ -376,7 +376,7 @@ export const html = (content: string, init?: ResponseInit): Response => {
   const statusText = init?.statusText ?? getHttpStatusText(status);
   const headers = new Headers(init?.headers);
   if (!headers.has("content-type")) {
-    headers.set("content-type", "text/html");
+    headers.set("content-type", "text/html; charset=utf-8");
   }
   return new Response(content, {
     statusText,
@@ -388,7 +388,7 @@ export const html = (content: string, init?: ResponseInit): Response => {
 
 /**
  * Creates a JSON Response.
- * Defaults to status 200 and application/json content-type if not specified.
+ * Defaults to status 200 and 'application/json; charset=utf-8' content-type if not specified.
  * Uses Response.json() internally which automatically serializes the body.
  * @param {any} body - The data to serialize as JSON
  * @param {ResponseInit} [init] - Additional response initialization options
@@ -402,7 +402,7 @@ export const json = (body: any, init?: ResponseInit): Response => {
   const statusText = init?.statusText ?? getHttpStatusText(status);
   const headers = new Headers(init?.headers);
   if (!headers.has("content-type")) {
-    headers.set("content-type", "application/json");
+    headers.set("content-type", "application/json; charset=utf-8");
   }
   return Response.json(body, {
     statusText,
@@ -524,42 +524,56 @@ export const usp = (usp?: URLSearchParams, init?: ResponseInit): Response => {
 /**
  * Creates a Response from various body types with automatic content-type detection.
  * Supports strings, objects (JSON), Blobs, ArrayBuffers, FormData, URLSearchParams, and ReadableStreams.
- * @param {BodyInit} [body] - The body content to return
+ * @param {BodyInit|Record<string, unknown>} [body] - The body content to return
  * @param {ResponseInit} [init] - Additional response initialization options
  * @returns {Response} A Response object with appropriate content-type
  * @example
  * send("text"); // text/plain
- * send({ message: "success" }); // application/json
+ * send({ message: "success" }); // application/json; charset=utf-8
  * send(new Blob([])); // blob.type || application/octet-stream
  * send(new FormData()); // multipart/form-data
  * send(new URLSearchParams()); // application/x-www-form-urlencoded
  */
-export const send = (body?: BodyInit, init?: ResponseInit): Response => {
+export const send = (
+  body?: BodyInit | Record<string, unknown>,
+  init?: ResponseInit,
+): Response => {
   const status = init?.status ?? 200;
   const statusText = init?.statusText ?? getHttpStatusText(status);
   const headers = new Headers(init?.headers);
-  if (body != null && !headers.has("content-type")) {
-    if (body instanceof URLSearchParams) {
+  const isContentTypeNotSet = !headers.has("content-type");
+  if (body instanceof URLSearchParams) {
+    if (isContentTypeNotSet) {
       headers.set("content-type", "application/x-www-form-urlencoded");
-      body = body.toString();
-    } else if (body instanceof FormData) {
-    } else if (typeof body === "string") {
+    }
+  } else if (body instanceof FormData) {
+    // content type will be generated
+  } else if (typeof body === "string") {
+    if (isContentTypeNotSet) {
       headers.set("content-type", "text/plain; charset=utf-8");
-    } else if (body instanceof Blob) {
+    }
+  } else if (body instanceof Blob) {
+    if (isContentTypeNotSet) {
       headers.set("content-type", body.type || "application/octet-stream");
-    } else if (body instanceof ArrayBuffer) {
-      headers.set("content-type", "application/octet-stream");
-    } else if (!(body instanceof ReadableStream)) {
-      headers.set("content-type", "application/json");
-      return Response.json(body, {
-        status,
-        statusText,
-        ...init,
-        headers,
-      });
-    } else {
+    }
+  } else if (
+    body instanceof ArrayBuffer ||
+    ArrayBuffer.isView(body) ||
+    body instanceof ReadableStream
+  ) {
+    if (isContentTypeNotSet) {
       headers.set("content-type", "application/octet-stream");
     }
+  } else if (body != null) {
+    if (isContentTypeNotSet) {
+      headers.set("content-type", "application/json; charset=utf-8");
+    }
+    return Response.json(body, {
+      status,
+      statusText,
+      ...init,
+      headers,
+    });
   }
   return new Response(body, {
     statusText,

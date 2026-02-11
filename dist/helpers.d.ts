@@ -78,7 +78,7 @@ export declare enum Status {
 export declare function getHttpStatusText(code: number): string;
 /**
  * Creates a Response with the specified status code.
- * Defaults to text/plain content-type if not provided in init.headers.
+ * Defaults to 'text/plain; charset=utf-8' content-type if not provided in init.headers.
  * @param {number} status - The HTTP status code
  * @param {string|null} [content] - The response body content
  * @param {ResponseInit} [init] - Additional response initialization options
@@ -113,7 +113,7 @@ export declare const forward: <XContext = {}>(path: string, options?: {
 }) => BoundHandler<XContext>;
 /**
  * Creates a text/plain Response.
- * Defaults to status 200 and text/plain content-type if not specified.
+ * Defaults to status 200 and 'text/plain; charset=utf-8' content-type if not specified.
  * @param {string} content - The text content to return
  * @param {ResponseInit} [init] - Additional response initialization options
  * @returns {Response} A Response object with text/plain content-type
@@ -135,7 +135,7 @@ export declare const text: (content: string, init?: ResponseInit) => Response;
 export declare const html: (content: string, init?: ResponseInit) => Response;
 /**
  * Creates a JSON Response.
- * Defaults to status 200 and application/json content-type if not specified.
+ * Defaults to status 200 and 'application/json; charset=utf-8' content-type if not specified.
  * Uses Response.json() internally which automatically serializes the body.
  * @param {any} body - The data to serialize as JSON
  * @param {ResponseInit} [init] - Additional response initialization options
@@ -193,17 +193,17 @@ export declare const usp: (usp?: URLSearchParams, init?: ResponseInit) => Respon
 /**
  * Creates a Response from various body types with automatic content-type detection.
  * Supports strings, objects (JSON), Blobs, ArrayBuffers, FormData, URLSearchParams, and ReadableStreams.
- * @param {BodyInit} [body] - The body content to return
+ * @param {BodyInit|Record<string, unknown>} [body] - The body content to return
  * @param {ResponseInit} [init] - Additional response initialization options
  * @returns {Response} A Response object with appropriate content-type
  * @example
  * send("text"); // text/plain
- * send({ message: "success" }); // application/json
+ * send({ message: "success" }); // application/json; charset=utf-8
  * send(new Blob([])); // blob.type || application/octet-stream
  * send(new FormData()); // multipart/form-data
  * send(new URLSearchParams()); // application/x-www-form-urlencoded
  */
-export declare const send: (body?: BodyInit, init?: ResponseInit) => Response;
+export declare const send: (body?: BodyInit | Record<string, unknown>, init?: ResponseInit) => Response;
 /**
  * Options for setting cookies.
  * @typedef {Object} CookieOptions

@@ -25,7 +25,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _a, _Router_trees, _Router_enable, _Router_defaultHeaders, _Router_defaultCatcher, _Router_defaultFallback, _Router_setters, _Router_ALL_METHOD_PATHS;
+var _Router_instances, _a, _Router_trees, _Router_enable, _Router_defaultHeaders, _Router_defaultCatcher, _Router_defaultFallback, _Router_normalizeTrailingSlash, _Router_setters, _Router_ALL_METHOD_PATHS, _Router_normalizePathname, _Router_splitUrl;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CRUD_METHODS = exports.ALL_METHODS = exports.Router = exports.isValidHttpMethod = void 0;
 const tree_1 = require("./tree");
@@ -136,6 +136,13 @@ class Router {
         return __classPrivateFieldGet(this, _Router_defaultFallback, "f");
     }
     /**
+     * Gets the current configuration to normalize trailing slash.
+     * @returns {boolean}
+     */
+    get normalizeTrailingSlash() {
+        return __classPrivateFieldGet(this, _Router_normalizeTrailingSlash, "f");
+    }
+    /**
      * Gets the route registration history.
      * @returns {Set<HandlerSetter<Context>>}
      */
@@ -147,6 +154,7 @@ class Router {
      * @param {RouterConfig<Context>} [config] - Configuration options
      */
     constructor(config) {
+        _Router_instances.add(this);
         _Router_trees.set(this, {
             filter: initMethodTrees(),
             hook: initMethodTrees(),
@@ -165,6 +173,7 @@ class Router {
         _Router_defaultHeaders.set(this, []);
         _Router_defaultCatcher.set(this, void 0);
         _Router_defaultFallback.set(this, void 0);
+        _Router_normalizeTrailingSlash.set(this, false);
         _Router_setters.set(this, new Set());
         this.respond = this.respond.bind(this);
         if (config === null || config === void 0 ? void 0 : config.defaultHeaders) {
@@ -178,6 +187,9 @@ class Router {
         }
         if (config === null || config === void 0 ? void 0 : config.defaultFallback) {
             __classPrivateFieldSet(this, _Router_defaultFallback, config.defaultFallback, "f");
+        }
+        if (config === null || config === void 0 ? void 0 : config.normalizeTrailingSlash) {
+            __classPrivateFieldSet(this, _Router_normalizeTrailingSlash, config.normalizeTrailingSlash, "f");
         }
     }
     /**
@@ -331,10 +343,10 @@ class Router {
         const pipeline = Array.isArray(pipeline_)
             ? pipeline_
             : [pipeline_];
-        const splitUrls = urls === "*" ? __classPrivateFieldGet(_a, _a, "f", _Router_ALL_METHOD_PATHS) : splitUrl(urls);
+        const splitUrls = __classPrivateFieldGet(this, _Router_instances, "m", _Router_splitUrl).call(this, urls === "*" ? __classPrivateFieldGet(_a, _a, "f", _Router_ALL_METHOD_PATHS) : urls);
         for (const { method, nodes, params, pathname } of splitUrls) {
             const treeNode = __classPrivateFieldGet(this, _Router_trees, "f")[handlerType][method];
-            const splitPaths = pathname.substring(1).split("/");
+            const splitPaths = __classPrivateFieldGet(this, _Router_instances, "m", _Router_normalizePathname).call(this, pathname);
             const splitPathsLength_1 = splitPaths.length - 1;
             for (let i = 0; i < splitPathsLength_1; i++) {
                 switch (splitPaths[i]) {
@@ -349,23 +361,23 @@ class Router {
             if (!(options === null || options === void 0 ? void 0 : options.overwrite)) {
                 const node = treeNode.get(splitPaths);
                 if (node) {
-                    const maxLen = Math.min(node.nodes.length, splitPaths.length);
-                    const colliding = [];
+                    const maxLen = Math.max(node.nodes.length, splitPaths.length);
+                    let colliding = null;
                     for (let i = 0; i < maxLen; i++) {
                         if (node.nodes[i] === "*") {
                             if (splitPaths[i].startsWith(":") || splitPaths[i] === "*") {
-                                colliding.unshift(i);
+                                colliding = i;
                             }
                             else {
                                 break;
                             }
                         }
                         else if (node.nodes[i] === splitPaths[i]) {
-                            colliding.unshift(i);
+                            colliding = i;
                         }
                     }
-                    if (colliding.length > 0 && colliding[0] === maxLen - 1) {
-                        throw new Error(`Overriding route '${node.pathname}' with '${pathname}'`);
+                    if (colliding != null && colliding === maxLen - 1) {
+                        throw new Error(`Overriding route ${method} '${node.pathname}' with '${pathname}'`);
                     }
                 }
             }
@@ -407,11 +419,7 @@ class Router {
             }
             let response = undefined;
             const url = new URL(req.url);
-            const key = url.pathname
-                .substring(1, url.pathname !== "/" && url.pathname.endsWith("/")
-                ? url.pathname.length - 1
-                : url.pathname.length)
-                .split("/");
+            const key = __classPrivateFieldGet(this, _Router_instances, "m", _Router_normalizePathname).call(this, url.pathname);
             const hookNodes = this.enabled.hooks
                 ? __classPrivateFieldGet(this, _Router_trees, "f").hook[method].getAll(key)
                 : emptyArray;
@@ -436,7 +444,8 @@ class Router {
                 fallbacks: fallbackNodes.length > 0,
                 catchers: catcherNodes.length > 0,
             };
-            const ctx = Object.assign({ params: (_c = context === null || context === void 0 ? void 0 : context.params) !== null && _c !== void 0 ? _c : {}, headers: (_d = context === null || context === void 0 ? void 0 : context.headers) !== null && _d !== void 0 ? _d : new Headers(this.defaultHeaders), found }, context);
+            const ctx = Object.assign({ url, params: (_c = context === null || context === void 0 ? void 0 : context.params) !== null && _c !== void 0 ? _c : {}, headers: (_d = context === null || context === void 0 ? void 0 : context.headers) !== null && _d !== void 0 ? _d : new Headers(this.defaultHeaders), found }, context);
+            const reqCtx = [req, ctx];
             try {
                 // hooks
                 if (found.hooks) {
@@ -449,7 +458,7 @@ class Router {
                     let hookResponse = undefined;
                     for (const hookNode of hookNodes) {
                         for (const hook of hookNode.pipeline) {
-                            hookResponse = yield hook.bind(this)(req, ctx);
+                            hookResponse = yield hook.apply(this, reqCtx);
                             if (hookResponse)
                                 break;
                         }
@@ -467,7 +476,7 @@ class Router {
                     }
                     for (const filterNode of filterNodes) {
                         for (const filter of filterNode.pipeline) {
-                            response = yield filter.bind(this)(req, ctx);
+                            response = yield filter.apply(this, reqCtx);
                             if (response)
                                 break;
                         }
@@ -486,7 +495,7 @@ class Router {
                     if (!(response instanceof Response)) {
                         for (const handlerNode of handlerNodes) {
                             for (const handler of handlerNode.pipeline) {
-                                response = yield handler.bind(this)(req, ctx);
+                                response = yield handler.apply(this, reqCtx);
                                 if (response)
                                     break;
                             }
@@ -506,7 +515,7 @@ class Router {
                         }
                         for (const fallbackNode of fallbackNodes) {
                             for (const fallback of fallbackNode.pipeline) {
-                                response = yield fallback.bind(this)(req, ctx);
+                                response = yield fallback.apply(this, reqCtx);
                                 if (response)
                                     break;
                             }
@@ -526,8 +535,6 @@ class Router {
                         }
                     }
                 }
-                if (response instanceof Response)
-                    ctx.response = response;
                 response =
                     (_e = (typeof response === "boolean" ? null : response)) !== null && _e !== void 0 ? _e : (found.handlers || found.fallbacks
                         ? new Response(null, {
@@ -540,6 +547,9 @@ class Router {
                             statusText: "Not Found",
                             headers: ctx.headers,
                         }));
+                if (response instanceof Response) {
+                    ctx.response = response;
+                }
                 // after response handlers
                 if (found.afters) {
                     const params = afterNodes[0].params;
@@ -551,7 +561,7 @@ class Router {
                     let afterResponse = undefined;
                     for (const afterNode of afterNodes) {
                         for (const after of afterNode.pipeline) {
-                            afterResponse = yield after.bind(this)(req, ctx);
+                            afterResponse = yield after.apply(this, reqCtx);
                             if (afterResponse)
                                 break;
                         }
@@ -564,24 +574,38 @@ class Router {
                 // error handlers
                 ctx.error = error instanceof Error ? error : new Error(String(error));
                 if (found.catchers) {
-                    const params = catcherNodes[0].params;
-                    if (params) {
-                        for (const [index, param] of params) {
-                            ctx.params[param.name] = key[index];
+                    try {
+                        const params = catcherNodes[0].params;
+                        if (params) {
+                            for (const [index, param] of params) {
+                                ctx.params[param.name] = key[index];
+                            }
                         }
-                    }
-                    for (const catcherNode of catcherNodes) {
-                        for (const catcher of catcherNode.pipeline) {
-                            response = yield catcher.bind(this)(req, ctx);
+                        for (const catcherNode of catcherNodes) {
+                            for (const catcher of catcherNode.pipeline) {
+                                response = yield catcher.apply(this, reqCtx);
+                                if (response)
+                                    break;
+                            }
                             if (response)
                                 break;
                         }
-                        if (response)
-                            break;
+                    }
+                    catch (error) {
+                        ctx.error = error instanceof Error ? error : new Error(String(error));
+                        if (__classPrivateFieldGet(this, _Router_defaultCatcher, "f")) {
+                            response = yield __classPrivateFieldGet(this, _Router_defaultCatcher, "f").call(this, req, ctx);
+                            if (response instanceof Response) {
+                                ctx.response = response;
+                            }
+                        }
                     }
                 }
-                if (!(response instanceof Response) && __classPrivateFieldGet(this, _Router_defaultCatcher, "f")) {
+                if (__classPrivateFieldGet(this, _Router_defaultCatcher, "f") && !(response instanceof Response)) {
                     response = yield __classPrivateFieldGet(this, _Router_defaultCatcher, "f").call(this, req, ctx);
+                    if (response instanceof Response) {
+                        ctx.response = response;
+                    }
                 }
                 if (!(response instanceof Response)) {
                     response = new Response("Internal Server Error", {
@@ -589,6 +613,7 @@ class Router {
                         statusText: "Internal Server Error",
                         headers: ctx.headers,
                     });
+                    ctx.response = response;
                 }
             }
             return response;
@@ -596,63 +621,33 @@ class Router {
     }
 }
 exports.Router = Router;
-_a = Router, _Router_trees = new WeakMap(), _Router_enable = new WeakMap(), _Router_defaultHeaders = new WeakMap(), _Router_defaultCatcher = new WeakMap(), _Router_defaultFallback = new WeakMap(), _Router_setters = new WeakMap();
-_Router_ALL_METHOD_PATHS = { value: splitUrl([
-        "HEAD /.**",
-        "OPTIONS /.**",
-        "GET /.**",
-        "POST /.**",
-        "PUT /.**",
-        "PATCH /.**",
-        "DELETE /.**",
-    ]) };
-exports.ALL_METHODS = [
-    "HEAD",
-    "OPTIONS",
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-];
-exports.CRUD_METHODS = [
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-];
-/**
- * Splits URL patterns into their components for routing.
- * Supports wildcards (*), super-globs (**), and parameters (:param).
- * @param {MethodPath|Array<MethodPath>} urls - URL patterns to split
- * @returns {Array<SplitURL>} Array of split URL components
- * @private
- * @example
- * // Returns: [{ method: 'GET', pathname: '/users/:id', nodes: ['users', '*'], params: Map({1: {name: 'id', index: 1}}) }]
- * splitUrl(["GET /users/:id"]);
- */
-function splitUrl(urls) {
+_a = Router, _Router_trees = new WeakMap(), _Router_enable = new WeakMap(), _Router_defaultHeaders = new WeakMap(), _Router_defaultCatcher = new WeakMap(), _Router_defaultFallback = new WeakMap(), _Router_normalizeTrailingSlash = new WeakMap(), _Router_setters = new WeakMap(), _Router_instances = new WeakSet(), _Router_normalizePathname = function _Router_normalizePathname(pathname) {
+    return (__classPrivateFieldGet(this, _Router_normalizeTrailingSlash, "f")
+        ? pathname.length > 1
+            ? pathname.substring(1, pathname.endsWith("/") ? pathname.length - 1 : pathname.length)
+            : pathname.substring(1)
+        : pathname.substring(1)).split("/");
+}, _Router_splitUrl = function _Router_splitUrl(urls) {
     urls = (Array.isArray(urls) ? urls : [urls]);
     let splitUrls = [];
     for (const mp of urls) {
         const [_method, pathname] = mp
             .split(" ", 2)
             .map((mu) => mu.trim());
-        const params = new Map();
-        const nodes = [];
-        const pathNodes = pathname.substring(1).split("/");
-        const lastPathNode = pathNodes.length > 0 && pathNodes[pathNodes.length - 1];
         const methods = _method === "ALL"
             ? exports.ALL_METHODS
             : _method === "CRUD"
                 ? exports.CRUD_METHODS
                 : [_method];
+        const pathNodes = __classPrivateFieldGet(this, _Router_instances, "m", _Router_normalizePathname).call(this, pathname);
         for (const method of methods) {
+            const params = new Map();
+            const nodes = [];
+            const lastPathNode = pathNodes.length > 0 && pathNodes[pathNodes.length - 1];
             // check the last path node to match globs '.**'
             if (lastPathNode === ".**") {
                 const curNodes = pathNodes.slice(0, pathNodes.length - 1);
-                splitUrls.push({ method, pathname, nodes: [...curNodes, ""], params });
+                splitUrls.push({ method, pathname, nodes: [...curNodes], params });
                 splitUrls.push({
                     method,
                     pathname,
@@ -662,8 +657,13 @@ function splitUrl(urls) {
             }
             else if (lastPathNode === ".*") {
                 const curNodes = pathNodes.splice(0, pathNodes.length - 1);
-                splitUrls.push({ method, pathname, nodes: [...curNodes, ""], params });
-                splitUrls.push({ method, pathname, nodes: [...curNodes, "*"], params });
+                splitUrls.push({ method, pathname, nodes: [...curNodes], params });
+                splitUrls.push({
+                    method,
+                    pathname,
+                    nodes: [...curNodes, "*"],
+                    params,
+                });
             }
             else {
                 // process the path nodes
@@ -686,6 +686,31 @@ function splitUrl(urls) {
         }
     }
     return splitUrls;
-}
+};
+_Router_ALL_METHOD_PATHS = { value: [
+        "HEAD /.**",
+        "OPTIONS /.**",
+        "GET /.**",
+        "POST /.**",
+        "PUT /.**",
+        "PATCH /.**",
+        "DELETE /.**",
+    ] };
+exports.ALL_METHODS = [
+    "HEAD",
+    "OPTIONS",
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+];
+exports.CRUD_METHODS = [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+];
 exports.default = Router;
 //# sourceMappingURL=router.js.map

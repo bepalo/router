@@ -1,9 +1,31 @@
 import { parseCookieFromRequest, status } from "./helpers";
 import type { RouterContext } from "./router";
-import type { FreeHandler, Handler, HttpMethod, CTXAddress } from "./types";
+import type { FreeHandler, HttpMethod, CTXAddress } from "./types";
 import { Cache, CacheConfig } from "@bepalo/cache";
 import { JWT, JwtPayload, JwtVerifyOptions } from "@bepalo/jwt";
 import { Time } from "@bepalo/time";
+
+/**
+ * Context object containing parsed query.
+ * @typedef {Object} CTXQuery
+ * @property {Record<string, string>} query - Parsed query from the request url
+ */
+export type CTXQuery = {
+  query: Record<string, string>;
+};
+
+/**
+ * Creates middleware that parses queries from the request url and adds them to the context.
+ * @returns {Function} A middleware function that adds parsed queries to context.query
+ */
+export const parseQuery = <XContext = {}>(): FreeHandler<
+  XContext & CTXQuery
+> => {
+  return (req: Request, ctx: RouterContext<XContext & CTXQuery>) => {
+    const query = Object.fromEntries(ctx.url.searchParams.entries());
+    ctx.query = query;
+  };
+};
 
 /**
  * Context object containing parsed cookies.
@@ -17,14 +39,11 @@ export type CTXCookie = {
 /**
  * Creates middleware that parses cookies from the request and adds them to the context.
  * @returns {Function} A middleware function that adds parsed cookies to context.cookie
- * @example
- * const cookieParser = parseCookie();
- * // Use in respondWith: respondWith({}, cookieParser(), ...otherHandlers)
  */
-export const parseCookie = <
-  Context extends CTXCookie,
->(): FreeHandler<Context> => {
-  return (req: Request, ctx: Context) => {
+export const parseCookie = <XContext = {}>(): FreeHandler<
+  XContext & CTXCookie
+> => {
+  return (req: Request, ctx: RouterContext<XContext & CTXCookie>) => {
     const cookie = parseCookieFromRequest(req) ?? {};
     ctx.cookie = cookie;
   };
@@ -70,12 +89,12 @@ export type SupportedBodyMediaTypes =
  * @throws {Response} Returns a 413 response if body exceeds maxSize
  * @throws {Response} Returns a 400 response if body is malformed
  */
-export const parseBody = <Context extends CTXBody>(options?: {
+export const parseBody = <XContext = {}>(options?: {
   accept?: SupportedBodyMediaTypes | SupportedBodyMediaTypes[]; // defaults to all
   maxSize?: number; // in bytes
   once?: boolean;
   clone?: boolean;
-}): FreeHandler<Context> => {
+}): FreeHandler<XContext & CTXBody> => {
   const accept = options?.accept
     ? Array.isArray(options.accept)
       ? options.accept
@@ -88,7 +107,7 @@ export const parseBody = <Context extends CTXBody>(options?: {
   const maxSize = options?.maxSize ?? 1024 * 1024; // Default 1MB
   const once = options?.once;
   const clone = options?.clone;
-  return async (_req: Request, ctx: Context) => {
+  return async (_req: Request, ctx: RouterContext<XContext & CTXBody>) => {
     if (once && ctx.body) return;
     const contentType = _req.headers.get("content-type")?.split(";", 2)[0];
     if (!(contentType && accept.includes(contentType))) {
@@ -183,13 +202,8 @@ export const parseBody = <Context extends CTXBody>(options?: {
  *
  * @throws {Error} If neither refillInterval nor refillRate is provided
  */
-export const limitRate = <
-  XContext = {},
-  Context extends RouterContext<XContext & CTXAddress> = RouterContext<
-    XContext & CTXAddress
-  >,
->(config: {
-  key: (req: Request, ctx: Context) => string;
+export const limitRate = <XContext = {}>(config: {
+  key: (req: Request, ctx: RouterContext<XContext & CTXAddress>) => string;
   refillInterval?: number;
   refillRate?: number;
   maxTokens: number;
@@ -198,7 +212,7 @@ export const limitRate = <
   cacheConfig?: CacheConfig<string, any>;
   setXRateLimitHeaders?: boolean;
   endHere?: boolean;
-}): Handler<Context> => {
+}): FreeHandler<XContext & CTXAddress> => {
   const {
     key,
     refillInterval,
@@ -225,7 +239,7 @@ export const limitRate = <
   };
   const rateLimits: Cache<string, CacheEntry> = new Cache(cacheConfig);
   if (refillInterval) {
-    return function (req: Request, ctx: Context) {
+    return function (req: Request, ctx: RouterContext<XContext & CTXAddress>) {
       const id = key(req, ctx);
       const entry = rateLimits.get(id)?.value as CacheEntry;
       const timeElapsed = now() - entry.lastRefill;
@@ -259,7 +273,7 @@ export const limitRate = <
       if (endHere) return true;
     };
   } else if (refillRate) {
-    return function (req: Request, ctx: Context) {
+    return function (req: Request, ctx: RouterContext<XContext & CTXAddress>) {
       const id = key(req, ctx);
       const entry = rateLimits.get(id)?.value as CacheEntry;
       const timeElapsed = now() - entry.lastRefill;
@@ -320,10 +334,7 @@ export const limitRate = <
  *
  * @throws {Error} If credentials is true with wildcard origin ("*")
  */
-export const cors = <
-  XContext = {},
-  Context extends RouterContext<XContext> = RouterContext<XContext>,
->(config?: {
+export const cors = <XContext = {}>(config?: {
   origins: "*" | string | string[];
   methods?: HttpMethod[] | null;
   allowedHeaders?: string[] | null;
@@ -332,7 +343,7 @@ export const cors = <
   maxAge?: number | null;
   varyOrigin?: boolean;
   endHere?: boolean;
-}): Handler<Context> => {
+}): FreeHandler<XContext> => {
   const {
     origins = "*",
     methods = ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
@@ -347,7 +358,7 @@ export const cors = <
   const originsSet = new Set(
     typeof origins !== "string" ? origins : origins !== "*" ? [] : [origins],
   );
-  return function (req: Request, ctx: Context) {
+  return function (req: Request, ctx: RouterContext<XContext>) {
     const origin = req.headers.get("origin");
     let corsOrigin: string | null = null;
     if (!origin) {
@@ -553,7 +564,7 @@ export const authorize = <XContext = {}>({
  * });
  */
 export const authBasic = <
-  Context extends CTXBasicAuth,
+  XContext extends CTXBasicAuth,
   prop extends string = "basicAuth",
 >({
   credentials,
@@ -563,14 +574,17 @@ export const authBasic = <
   ctxProp = "basicAuth" as prop,
   endHere = false,
 }: {
-  credentials: Map<string, { password: string } & Record<string, any>>;
+  credentials: Map<
+    string,
+    { password: string; role: string } & Record<string, any>
+  >;
   type?: "raw" | "base64";
   separator?: ":" | " ";
   realm?: string;
   ctxProp?: prop;
   endHere?: boolean;
-}): Handler<Context> => {
-  return (req: Request, ctx: Context) => {
+}): FreeHandler<XContext & CTXBasicAuth> => {
+  return (req: Request, ctx: RouterContext<XContext & CTXBasicAuth>) => {
     const authorization = req.headers.get("authorization");
     ctx.headers.set(
       "WWW-Authenticate",
@@ -579,16 +593,18 @@ export const authBasic = <
     if (!authorization) return status(401);
     const [scheme, creds] = authorization.split(" ", 2);
     if (scheme.toLowerCase() !== "basic" || !creds) return status(401);
-    let xcreds;
-    try {
-      xcreds = type === "base64" ? atob(creds) : creds;
-    } catch {
-      return status(401);
+    let xcreds = creds;
+    if (type === "base64") {
+      try {
+        xcreds = atob(creds);
+      } catch {
+        return status(401);
+      }
     }
     const [username, password] = xcreds.split(separator, 2);
     if (!username || !password) return status(401);
     const user = credentials.get(username);
-    if (!user || password !== user.pass) return status(401);
+    if (!user || password !== user.password) return status(401);
     (ctx as { [K in prop]: any })[ctxProp] = {
       username,
       role: user.role,
@@ -641,7 +657,7 @@ export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext<{
  * });
  */
 export const authAPIKey = <
-  Context extends CTXAPIKeyAuth,
+  XContext extends CTXAPIKeyAuth,
   prop extends string = "apiKeyAuth",
 >({
   verify,
@@ -651,8 +667,8 @@ export const authAPIKey = <
   verify: (apiKey: string) => boolean;
   ctxProp?: prop;
   endHere?: boolean;
-}): Handler<Context> => {
-  return (req: Request, ctx: Context) => {
+}): FreeHandler<XContext & CTXAPIKeyAuth> => {
+  return (req: Request, ctx: RouterContext<XContext & CTXAPIKeyAuth>) => {
     const apiKey = req.headers.get("X-API-Key");
     if (!apiKey || !verify(apiKey)) return status(401);
     (ctx as { [K in prop]: any })[ctxProp] = {
@@ -729,7 +745,7 @@ export type CTXJWTAuth<
  */
 export const authJWT = <
   Payload extends JwtPayload<{}>,
-  Context extends CTXJWTAuth<Payload, prop>,
+  XContext extends CTXJWTAuth<Payload, prop>,
   prop extends string = "jwtAuth",
 >({
   jwt,
@@ -743,8 +759,8 @@ export const authJWT = <
   verifyOptions?: JwtVerifyOptions;
   ctxProp?: prop;
   endHere?: boolean;
-}): Handler<Context> => {
-  return (req: Request, ctx: Context) => {
+}): FreeHandler<XContext & CTXJWTAuth<Payload>> => {
+  return (req: Request, ctx: RouterContext<XContext & CTXJWTAuth<Payload>>) => {
     const authorization = req.headers.get("authorization");
     if (!authorization) return status(401);
     const [scheme, token] = authorization.split(" ", 2);

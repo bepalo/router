@@ -55,6 +55,7 @@ type RouteNode<Context = {}> = {
  * @property {boolean} found.catchers - Whether any catchers were found
  */
 export type RouterContext<XContext = {}> = {
+    url: URL;
     params: Record<string, string>;
     headers: Headers;
     response?: Response;
@@ -100,6 +101,7 @@ export interface RouterConfig<Context extends RouterContext = RouterContext> {
     defaultCatcher?: Handler<Context & CTXError>;
     defaultFallback?: Handler<Context>;
     enable?: HandlerEnable;
+    normalizeTrailingSlash?: boolean;
 }
 /**
  * Options for route registration.
@@ -175,6 +177,11 @@ export declare class Router<EXTContext = {}, Context extends RouterContext<EXTCo
      * @returns {Handler<Context>|undefined}
      */
     get defaultFallback(): Handler<Context> | undefined;
+    /**
+     * Gets the current configuration to normalize trailing slash.
+     * @returns {boolean}
+     */
+    get normalizeTrailingSlash(): boolean;
     /**
      * Gets the route registration history.
      * @returns {Set<HandlerSetter<Context>>}
@@ -309,7 +316,7 @@ export declare class Router<EXTContext = {}, Context extends RouterContext<EXTCo
      * @param {Partial<Context>} [context] - Initial context object
      * @returns {Promise<Response>} The HTTP response
      */
-    respond(req: Request, context?: Partial<Context>): Promise<Response>;
+    respond(req: Request, context?: Partial<Omit<Context, "url" | "error" | "found" | "response">>): Promise<Response>;
 }
 export interface SplitURL {
     method: HttpMethod;

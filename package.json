@@ -1,6 +1,6 @@
 {
   "name": "@bepalo/router",
-  "version": "1.6.21",
+  "version": "1.7.22",
   "description": "A fast and feature-rich router for JavaScript runtimes.",
   "author": "Natnael Eshetu",
   "license": "MIT",

@@ -8,6 +8,24 @@ Generated on: 2026-02-11
 
 <!-- Newest first (most recent → oldest) -->
 
+## v1.6.22 — 2026-02-11
+
+- **Hash:** 88bed653bc11a40b683cd1693db00f679170c622
+- **Author:** Natnael Eshetu
+- **Changes:** v1.7.22 enhancement +fix
+  - add url instance to router context
+  - implement parseQuery middleware
+  - implement normalizeTrailingSlash router option and support for empty parameters
+  - update methods in the tree datastructure
+  - fix authBasic middleware issue
+  - fix route issue with ALL and CRUD shortcuts
+  - include method in route override error
+  - improve send helper function
+  - add utf-8 encoding to text/plain, text/html and application/json content types in helper functions
+  - patch types in middleware functions
+  - add middleware tests
+  - add new router tests
+
 ## v1.6.21 — 2026-02-11
 
 - **Hash:** 8795bee17090369f445aa0b787c0b391ef3d2015

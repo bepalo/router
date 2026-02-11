@@ -42,23 +42,20 @@ export class Tree<V> {
     const klen_1 = key.length - 1;
     for (let i = 0; i < key.length && node != null; i++) {
       const keyPart = key[i];
-      if (keyPart !== "") {
-        const glob = node.children.get("**");
-        if (glob?.value != null) {
-          values.unshift(glob.value);
-        }
+      const superGlob = node.children.get("**");
+      if (superGlob?.value != null) {
+        values.unshift(superGlob.value);
       }
       if (i < klen_1) {
-        let nextNode = node.children.get(keyPart || "*");
-        if (nextNode == null || nextNode.children.size === 0) {
+        let nextNode = node.children.get(keyPart);
+        if (nextNode == null) {
           nextNode = node.children.get("*");
         }
         node = nextNode;
       } else {
-        const value = !keyPart
-          ? node.value
-          : (node.children.get(keyPart)?.value ??
-            node.children.get("*")?.value);
+        const glob = node.children.get("*");
+        if (glob?.value) values.unshift(glob.value);
+        const value = node.children.get(keyPart)?.value;
         if (value) values.unshift(value);
         break;
       }
@@ -72,16 +69,14 @@ export class Tree<V> {
     for (let i = 0; i < key.length && node != null; i++) {
       const keyPart = key[i];
       if (i < klen_1) {
-        let nextNode = node.children.get(keyPart || "*");
+        let nextNode = node.children.get(keyPart);
         if (nextNode == null) {
           nextNode = node.children.get("*");
         }
         node = nextNode;
       } else {
-        const value = !keyPart
-          ? node.value
-          : (node.children.get(keyPart)?.value ??
-            node.children.get("*")?.value);
+        const value =
+          node.children.get(keyPart)?.value ?? node.children.get("*")?.value;
         return value;
       }
     }
@@ -94,13 +89,13 @@ export class Tree<V> {
     for (let i = 0; i < key.length && node != null; i++) {
       const keyPart = key[i];
       if (i < klen_1) {
-        let nextNode = node.children.get(keyPart || "*");
+        let nextNode = node.children.get(keyPart);
         if (nextNode == null) {
           nextNode = node.children.get("*");
         }
         node = nextNode;
       } else {
-        return !keyPart ? !!node.value : !!node.children.get(keyPart)?.value;
+        return node.children.get(keyPart)?.value != null;
       }
     }
     return false;
@@ -114,7 +109,7 @@ export class Tree<V> {
     const klen_1 = key.length - 1;
     for (let i = 0; i < key.length; i++) {
       if (i < klen_1) {
-        const keyPart = key[i] || "*";
+        const keyPart = key[i];
         const curNode = node.children.get(keyPart);
         if (!curNode) {
           const newNode = new TreeNode<V>();
@@ -125,18 +120,14 @@ export class Tree<V> {
         }
       } else {
         const keyPart = key[i];
-        if (!keyPart) {
-          node.value = value;
+        const curNode = node.children.get(keyPart);
+        if (!curNode) {
+          const newNode = new TreeNode<V>(value);
+          node.children.set(keyPart, newNode);
+          node = newNode;
         } else {
-          const curNode = node.children.get(keyPart);
-          if (!curNode) {
-            const newNode = new TreeNode<V>(value);
-            node.children.set(keyPart, newNode);
-            node = newNode;
-          } else {
-            curNode.value = value;
-            node = curNode;
-          }
+          curNode.value = value;
+          node = curNode;
         }
       }
     }

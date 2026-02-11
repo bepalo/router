@@ -275,7 +275,7 @@ function getHttpStatusText(code) {
 }
 /**
  * Creates a Response with the specified status code.
- * Defaults to text/plain content-type if not provided in init.headers.
+ * Defaults to 'text/plain; charset=utf-8' content-type if not provided in init.headers.
  * @param {number} status - The HTTP status code
  * @param {string|null} [content] - The response body content
  * @param {ResponseInit} [init] - Additional response initialization options
@@ -290,7 +290,7 @@ const status = (status, content, init) => {
     const statusText = (_a = init === null || init === void 0 ? void 0 : init.statusText) !== null && _a !== void 0 ? _a : getHttpStatusText(status);
     const headers = new Headers(init === null || init === void 0 ? void 0 : init.headers);
     if (content !== null && !headers.has("content-type")) {
-        headers.set("content-type", "text/plain");
+        headers.set("content-type", "text/plain; charset=utf-8");
     }
     return new Response(content !== undefined ? content : statusText, Object.assign(Object.assign({ statusText }, init), { status,
         headers }));
@@ -348,7 +348,7 @@ const forward = (path, options) => {
 exports.forward = forward;
 /**
  * Creates a text/plain Response.
- * Defaults to status 200 and text/plain content-type if not specified.
+ * Defaults to status 200 and 'text/plain; charset=utf-8' content-type if not specified.
  * @param {string} content - The text content to return
  * @param {ResponseInit} [init] - Additional response initialization options
  * @returns {Response} A Response object with text/plain content-type
@@ -362,7 +362,7 @@ const text = (content, init) => {
     const statusText = (_b = init === null || init === void 0 ? void 0 : init.statusText) !== null && _b !== void 0 ? _b : getHttpStatusText(status);
     const headers = new Headers(init === null || init === void 0 ? void 0 : init.headers);
     if (!headers.has("content-type")) {
-        headers.set("content-type", "text/plain");
+        headers.set("content-type", "text/plain; charset=utf-8");
     }
     return new Response(content, Object.assign(Object.assign({ statusText }, init), { status,
         headers }));
@@ -384,7 +384,7 @@ const html = (content, init) => {
     const statusText = (_b = init === null || init === void 0 ? void 0 : init.statusText) !== null && _b !== void 0 ? _b : getHttpStatusText(status);
     const headers = new Headers(init === null || init === void 0 ? void 0 : init.headers);
     if (!headers.has("content-type")) {
-        headers.set("content-type", "text/html");
+        headers.set("content-type", "text/html; charset=utf-8");
     }
     return new Response(content, Object.assign(Object.assign({ statusText }, init), { status,
         headers }));
@@ -392,7 +392,7 @@ const html = (content, init) => {
 exports.html = html;
 /**
  * Creates a JSON Response.
- * Defaults to status 200 and application/json content-type if not specified.
+ * Defaults to status 200 and 'application/json; charset=utf-8' content-type if not specified.
  * Uses Response.json() internally which automatically serializes the body.
  * @param {any} body - The data to serialize as JSON
  * @param {ResponseInit} [init] - Additional response initialization options
@@ -407,7 +407,7 @@ const json = (body, init) => {
     const statusText = (_b = init === null || init === void 0 ? void 0 : init.statusText) !== null && _b !== void 0 ? _b : getHttpStatusText(status);
     const headers = new Headers(init === null || init === void 0 ? void 0 : init.headers);
     if (!headers.has("content-type")) {
-        headers.set("content-type", "application/json");
+        headers.set("content-type", "application/json; charset=utf-8");
     }
     return Response.json(body, Object.assign(Object.assign({ statusText }, init), { status,
         headers }));
@@ -504,12 +504,12 @@ exports.usp = usp;
 /**
  * Creates a Response from various body types with automatic content-type detection.
  * Supports strings, objects (JSON), Blobs, ArrayBuffers, FormData, URLSearchParams, and ReadableStreams.
- * @param {BodyInit} [body] - The body content to return
+ * @param {BodyInit|Record<string, unknown>} [body] - The body content to return
  * @param {ResponseInit} [init] - Additional response initialization options
  * @returns {Response} A Response object with appropriate content-type
  * @example
  * send("text"); // text/plain
- * send({ message: "success" }); // application/json
+ * send({ message: "success" }); // application/json; charset=utf-8
  * send(new Blob([])); // blob.type || application/octet-stream
  * send(new FormData()); // multipart/form-data
  * send(new URLSearchParams()); // application/x-www-form-urlencoded
@@ -519,30 +519,38 @@ const send = (body, init) => {
     const status = (_a = init === null || init === void 0 ? void 0 : init.status) !== null && _a !== void 0 ? _a : 200;
     const statusText = (_b = init === null || init === void 0 ? void 0 : init.statusText) !== null && _b !== void 0 ? _b : getHttpStatusText(status);
     const headers = new Headers(init === null || init === void 0 ? void 0 : init.headers);
-    if (body != null && !headers.has("content-type")) {
-        if (body instanceof URLSearchParams) {
+    const isContentTypeNotSet = !headers.has("content-type");
+    if (body instanceof URLSearchParams) {
+        if (isContentTypeNotSet) {
             headers.set("content-type", "application/x-www-form-urlencoded");
-            body = body.toString();
         }
-        else if (body instanceof FormData) {
-        }
-        else if (typeof body === "string") {
+    }
+    else if (body instanceof FormData) {
+        // content type will be generated
+    }
+    else if (typeof body === "string") {
+        if (isContentTypeNotSet) {
             headers.set("content-type", "text/plain; charset=utf-8");
         }
-        else if (body instanceof Blob) {
+    }
+    else if (body instanceof Blob) {
+        if (isContentTypeNotSet) {
             headers.set("content-type", body.type || "application/octet-stream");
         }
-        else if (body instanceof ArrayBuffer) {
+    }
+    else if (body instanceof ArrayBuffer ||
+        ArrayBuffer.isView(body) ||
+        body instanceof ReadableStream) {
+        if (isContentTypeNotSet) {
             headers.set("content-type", "application/octet-stream");
         }
-        else if (!(body instanceof ReadableStream)) {
-            headers.set("content-type", "application/json");
-            return Response.json(body, Object.assign(Object.assign({ status,
-                statusText }, init), { headers }));
+    }
+    else if (body != null) {
+        if (isContentTypeNotSet) {
+            headers.set("content-type", "application/json; charset=utf-8");
         }
-        else {
-            headers.set("content-type", "application/octet-stream");
-        }
+        return Response.json(body, Object.assign(Object.assign({ status,
+            statusText }, init), { headers }));
     }
     return new Response(body, Object.assign(Object.assign({ statusText }, init), { status,
         headers }));
