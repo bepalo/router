@@ -182,8 +182,7 @@ export async function* walk(
 ): AsyncGenerator<DirWalkNode> {
   rootPath = rootPath || dir;
   if (isDeno) {
-    const { join, resolve, relative } =
-      await import("https://deno.land/std/path/mod.ts");
+    const { join, resolve, relative } = await import("jsr:@std/path@1");
     for await (const entry of DenoProxy.readDir(dir)) {
       const name = entry.name;
       const parent = relative(rootPath, dir).replace(/\\/g, "/");

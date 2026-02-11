@@ -8,9 +8,16 @@ Generated on: 2026-02-11
 
 <!-- Newest first (most recent → oldest) -->
 
-## v1.8.25 — 2026-02-11
+## v1.8.26 — 2026-02-12
 
 - **Hash:** TBA
+- **Author:** Natnael Eshetu
+- **Changes:** v1.8.26 bug fix
+  - fix deno std-path library import issue
+
+## v1.8.25 — 2026-02-12
+
+- **Hash:** 223aa631ed8a353b07fde0e5bfeb96cbeee0bb79
 - **Author:** Natnael Eshetu
 - **Changes:** v1.8.25 bug fix
   - fix super-glob(.\*\*) route definition issue

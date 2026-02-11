@@ -216,7 +216,7 @@ function walk(dir, rootPath) {
         var _a, e_2, _b, _c;
         rootPath = rootPath || dir;
         if (exports.isDeno) {
-            const { join, resolve, relative } = yield __await(Promise.resolve().then(() => __importStar(require("https://deno.land/std/path/mod.ts"))));
+            const { join, resolve, relative } = yield __await(Promise.resolve().then(() => __importStar(require("jsr:@std/path@1"))));
             try {
                 for (var _d = true, _e = __asyncValues(exports.DenoProxy.readDir(dir)), _f; _f = yield __await(_e.next()), _a = _f.done, !_a; _d = true) {
                     _c = _f.value;
