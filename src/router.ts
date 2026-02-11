@@ -857,16 +857,15 @@ export class Router<
   }
 
   #normalizePathname(pathname: string): string[] {
-    return (
-      this.#normalizeTrailingSlash
-        ? pathname.length > 1
+    return pathname === "/"
+      ? [""]
+      : (this.#normalizeTrailingSlash
           ? pathname.substring(
               1,
               pathname.endsWith("/") ? pathname.length - 1 : pathname.length,
             )
           : pathname.substring(1)
-        : pathname.substring(1)
-    ).split("/");
+        ).split("/");
   }
 
   /**
@@ -904,7 +903,12 @@ export class Router<
         // check the last path node to match globs '.**'
         if (lastPathNode === ".**") {
           const curNodes = pathNodes.slice(0, pathNodes.length - 1);
-          splitUrls.push({ method, pathname, nodes: [...curNodes], params });
+          splitUrls.push({
+            method,
+            pathname,
+            nodes: curNodes.length === 0 ? [""] : [...curNodes],
+            params,
+          });
           splitUrls.push({
             method,
             pathname,
@@ -913,7 +917,12 @@ export class Router<
           });
         } else if (lastPathNode === ".*") {
           const curNodes = pathNodes.splice(0, pathNodes.length - 1);
-          splitUrls.push({ method, pathname, nodes: [...curNodes], params });
+          splitUrls.push({
+            method,
+            pathname,
+            nodes: curNodes.length === 0 ? [""] : [...curNodes],
+            params,
+          });
           splitUrls.push({
             method,
             pathname,

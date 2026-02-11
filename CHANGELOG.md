@@ -8,9 +8,16 @@ Generated on: 2026-02-11
 
 <!-- Newest first (most recent → oldest) -->
 
-## v1.8.23 — 2026-02-11
+## v1.8.25 — 2026-02-11
 
 - **Hash:** TBA
+- **Author:** Natnael Eshetu
+- **Changes:** v1.8.25 bug fix
+  - fix super-glob(.\*\*) route definition issue
+
+## v1.8.23 — 2026-02-11
+
+- **Hash:** 2c8805403d7ff5823de1f6d7610e6eed7d7cd33b
 - **Author:** Natnael Eshetu
 - **Changes:** v1.8.23 framework
   - implement file based routing framework

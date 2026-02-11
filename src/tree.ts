@@ -42,9 +42,11 @@ export class Tree<V> {
     const klen_1 = key.length - 1;
     for (let i = 0; i < key.length && node != null; i++) {
       const keyPart = key[i];
-      const superGlob = node.children.get("**");
-      if (superGlob?.value != null) {
-        values.unshift(superGlob.value);
+      if (keyPart !== "") {
+        const superGlob = node.children.get("**");
+        if (superGlob?.value != null) {
+          values.unshift(superGlob.value);
+        }
       }
       if (i < klen_1) {
         let nextNode = node.children.get(keyPart);
@@ -121,13 +123,13 @@ export class Tree<V> {
       } else {
         const keyPart = key[i];
         const curNode = node.children.get(keyPart);
-        if (!curNode) {
+        if (curNode) {
+          curNode.value = value;
+          node = curNode;
+        } else {
           const newNode = new TreeNode<V>(value);
           node.children.set(keyPart, newNode);
           node = newNode;
-        } else {
-          curNode.value = value;
-          node = curNode;
         }
       }
     }

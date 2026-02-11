@@ -623,11 +623,11 @@ class Router {
 }
 exports.Router = Router;
 _a = Router, _Router_trees = new WeakMap(), _Router_enable = new WeakMap(), _Router_defaultHeaders = new WeakMap(), _Router_defaultCatcher = new WeakMap(), _Router_defaultFallback = new WeakMap(), _Router_normalizeTrailingSlash = new WeakMap(), _Router_setters = new WeakMap(), _Router_instances = new WeakSet(), _Router_normalizePathname = function _Router_normalizePathname(pathname) {
-    return (__classPrivateFieldGet(this, _Router_normalizeTrailingSlash, "f")
-        ? pathname.length > 1
+    return pathname === "/"
+        ? [""]
+        : (__classPrivateFieldGet(this, _Router_normalizeTrailingSlash, "f")
             ? pathname.substring(1, pathname.endsWith("/") ? pathname.length - 1 : pathname.length)
-            : pathname.substring(1)
-        : pathname.substring(1)).split("/");
+            : pathname.substring(1)).split("/");
 }, _Router_splitUrl = function _Router_splitUrl(urls) {
     urls = (Array.isArray(urls) ? urls : [urls]);
     let splitUrls = [];
@@ -648,7 +648,12 @@ _a = Router, _Router_trees = new WeakMap(), _Router_enable = new WeakMap(), _Rou
             // check the last path node to match globs '.**'
             if (lastPathNode === ".**") {
                 const curNodes = pathNodes.slice(0, pathNodes.length - 1);
-                splitUrls.push({ method, pathname, nodes: [...curNodes], params });
+                splitUrls.push({
+                    method,
+                    pathname,
+                    nodes: curNodes.length === 0 ? [""] : [...curNodes],
+                    params,
+                });
                 splitUrls.push({
                     method,
                     pathname,
@@ -658,7 +663,12 @@ _a = Router, _Router_trees = new WeakMap(), _Router_enable = new WeakMap(), _Rou
             }
             else if (lastPathNode === ".*") {
                 const curNodes = pathNodes.splice(0, pathNodes.length - 1);
-                splitUrls.push({ method, pathname, nodes: [...curNodes], params });
+                splitUrls.push({
+                    method,
+                    pathname,
+                    nodes: curNodes.length === 0 ? [""] : [...curNodes],
+                    params,
+                });
                 splitUrls.push({
                     method,
                     pathname,
