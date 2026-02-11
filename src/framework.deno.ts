@@ -12,8 +12,6 @@ import type {
   CTXError,
 } from "./types";
 
-export const isDeno = "Deno" in globalThis;
-export const DenoProxy = isDeno ? (globalThis as any).Deno : {};
 const defaultValidExtensions = [".ts", ".js", ".tsx", ".jsx"];
 const defaultNodeFilter = (node: DirWalkNode) =>
   defaultValidExtensions.some((ext) => node.name.endsWith(ext));
@@ -95,7 +93,7 @@ export class RouterFramework<
         let handlersImp;
         let handlers: RouterHandlers | undefined;
         try {
-          handlersImp = await import(node.fullPath);
+          handlersImp = await import(`file://${node.fullPath}`);
           handlers = handlersImp?.default satisfies RouterHandlers;
         } catch (error) {
           console.error(`Failed to import route at ${node.fullPath}:`, error);
@@ -179,17 +177,14 @@ export async function* walk(
   rootPath?: string,
 ): AsyncGenerator<DirWalkNode> {
   rootPath = rootPath || dir;
-  const fs = await import("fs");
-  const { join, resolve, relative } = await import("path");
-  for (const entry of await fs.promises.readdir(dir, {
-    withFileTypes: true,
-  })) {
+  const { join, resolve, relative } = await import("jsr:@std/path@1");
+  for await (const entry of Deno.readDir(dir)) {
     const name = entry.name;
     const parent = relative(rootPath, dir).replace(/\\/g, "/");
     const path = join(dir, name).replace(/\\/g, "/");
     const fullPath = resolve(dir, name).replace(/\\/g, "/");
     const relativePath = relative(rootPath, path).replace(/\\/g, "/");
-    if (entry.isDirectory()) {
+    if (entry.isDirectory) {
       yield { type: "dir", name, path, parent, fullPath, relativePath };
       yield* walk(path, rootPath);
     } else {

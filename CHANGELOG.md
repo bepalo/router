@@ -8,12 +8,13 @@ Generated on: 2026-02-11
 
 <!-- Newest first (most recent → oldest) -->
 
-## v1.8.26 — 2026-02-12
+## v1.8.27 — 2026-02-12
 
 - **Hash:** TBA
 - **Author:** Natnael Eshetu
-- **Changes:** v1.8.26 bug fix
+- **Changes:** v1.8.27 bug fix
   - fix deno std-path library import issue
+  - separate framework implementation for deno
 
 ## v1.8.25 — 2026-02-12
 

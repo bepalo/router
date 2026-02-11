@@ -139,7 +139,7 @@ class RouterFramework extends router_1.default {
                         let handlersImp;
                         let handlers;
                         try {
-                            handlersImp = yield Promise.resolve(`${exports.isDeno ? `file://${node.fullPath}` : node.fullPath}`).then(s => __importStar(require(s)));
+                            handlersImp = yield Promise.resolve(`${node.fullPath}`).then(s => __importStar(require(s)));
                             handlers = handlersImp === null || handlersImp === void 0 ? void 0 : handlersImp.default;
                         }
                         catch (error) {
@@ -213,55 +213,23 @@ exports.RouterFramework = RouterFramework;
 _RouterFramework_rootPath = new WeakMap(), _RouterFramework_filterNode = new WeakMap(), _RouterFramework_processNode = new WeakMap(), _RouterFramework_onDir = new WeakMap(), _RouterFramework_loading = new WeakMap(), _RouterFramework_loaded = new WeakMap();
 function walk(dir, rootPath) {
     return __asyncGenerator(this, arguments, function* walk_1() {
-        var _a, e_2, _b, _c;
         rootPath = rootPath || dir;
-        if (exports.isDeno) {
-            const { join, resolve, relative } = yield __await(Promise.resolve().then(() => __importStar(require("jsr:@std/path@1"))));
-            try {
-                for (var _d = true, _e = __asyncValues(exports.DenoProxy.readDir(dir)), _f; _f = yield __await(_e.next()), _a = _f.done, !_a; _d = true) {
-                    _c = _f.value;
-                    _d = false;
-                    const entry = _c;
-                    const name = entry.name;
-                    const parent = relative(rootPath, dir).replace(/\\/g, "/");
-                    const path = join(dir, name).replace(/\\/g, "/");
-                    const fullPath = resolve(dir, name).replace(/\\/g, "/");
-                    const relativePath = relative(rootPath, path).replace(/\\/g, "/");
-                    if (entry.isDirectory) {
-                        yield yield __await({ type: "dir", name, path, parent, fullPath, relativePath });
-                        yield __await(yield* __asyncDelegator(__asyncValues(walk(path, rootPath))));
-                    }
-                    else {
-                        yield yield __await({ type: "file", name, path, parent, fullPath, relativePath });
-                    }
-                }
+        const fs = yield __await(Promise.resolve().then(() => __importStar(require("fs"))));
+        const { join, resolve, relative } = yield __await(Promise.resolve().then(() => __importStar(require("path"))));
+        for (const entry of yield __await(fs.promises.readdir(dir, {
+            withFileTypes: true,
+        }))) {
+            const name = entry.name;
+            const parent = relative(rootPath, dir).replace(/\\/g, "/");
+            const path = join(dir, name).replace(/\\/g, "/");
+            const fullPath = resolve(dir, name).replace(/\\/g, "/");
+            const relativePath = relative(rootPath, path).replace(/\\/g, "/");
+            if (entry.isDirectory()) {
+                yield yield __await({ type: "dir", name, path, parent, fullPath, relativePath });
+                yield __await(yield* __asyncDelegator(__asyncValues(walk(path, rootPath))));
             }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
-            finally {
-                try {
-                    if (!_d && !_a && (_b = _e.return)) yield __await(_b.call(_e));
-                }
-                finally { if (e_2) throw e_2.error; }
-            }
-        }
-        else {
-            const fs = yield __await(Promise.resolve().then(() => __importStar(require("fs"))));
-            const { join, resolve, relative } = yield __await(Promise.resolve().then(() => __importStar(require("path"))));
-            for (const entry of yield __await(fs.promises.readdir(dir, {
-                withFileTypes: true,
-            }))) {
-                const name = entry.name;
-                const parent = relative(rootPath, dir).replace(/\\/g, "/");
-                const path = join(dir, name).replace(/\\/g, "/");
-                const fullPath = resolve(dir, name).replace(/\\/g, "/");
-                const relativePath = relative(rootPath, path).replace(/\\/g, "/");
-                if (entry.isDirectory()) {
-                    yield yield __await({ type: "dir", name, path, parent, fullPath, relativePath });
-                    yield __await(yield* __asyncDelegator(__asyncValues(walk(path, rootPath))));
-                }
-                else {
-                    yield yield __await({ type: "file", name, path, parent, fullPath, relativePath });
-                }
+            else {
+                yield yield __await({ type: "file", name, path, parent, fullPath, relativePath });
             }
         }
     });

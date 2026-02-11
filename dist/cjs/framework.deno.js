@@ -90,11 +90,9 @@ var __asyncGenerator = (this && this.__asyncGenerator) || function (thisArg, _ar
 };
 var _RouterFramework_rootPath, _RouterFramework_filterNode, _RouterFramework_processNode, _RouterFramework_onDir, _RouterFramework_loading, _RouterFramework_loaded;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RouterFramework = exports.DenoProxy = exports.isDeno = void 0;
+exports.RouterFramework = void 0;
 exports.walk = walk;
 const router_1 = __importStar(require("./router"));
-exports.isDeno = "Deno" in globalThis;
-exports.DenoProxy = exports.isDeno ? globalThis.Deno : {};
 const defaultValidExtensions = [".ts", ".js", ".tsx", ".jsx"];
 const defaultNodeFilter = (node) => defaultValidExtensions.some((ext) => node.name.endsWith(ext));
 const defaultNodeProcessor = (node) => {
@@ -139,7 +137,7 @@ class RouterFramework extends router_1.default {
                         let handlersImp;
                         let handlers;
                         try {
-                            handlersImp = yield import(node.fullPath);
+                            handlersImp = yield Promise.resolve(`${`file://${node.fullPath}`}`).then(s => __importStar(require(s)));
                             handlers = handlersImp === null || handlersImp === void 0 ? void 0 : handlersImp.default;
                         }
                         catch (error) {
@@ -213,25 +211,35 @@ exports.RouterFramework = RouterFramework;
 _RouterFramework_rootPath = new WeakMap(), _RouterFramework_filterNode = new WeakMap(), _RouterFramework_processNode = new WeakMap(), _RouterFramework_onDir = new WeakMap(), _RouterFramework_loading = new WeakMap(), _RouterFramework_loaded = new WeakMap();
 function walk(dir, rootPath) {
     return __asyncGenerator(this, arguments, function* walk_1() {
+        var _a, e_2, _b, _c;
         rootPath = rootPath || dir;
-        const fs = yield __await(import("fs"));
-        const { join, resolve, relative } = yield __await(import("path"));
-        for (const entry of yield __await(fs.promises.readdir(dir, {
-            withFileTypes: true,
-        }))) {
-            const name = entry.name;
-            const parent = relative(rootPath, dir).replace(/\\/g, "/");
-            const path = join(dir, name).replace(/\\/g, "/");
-            const fullPath = resolve(dir, name).replace(/\\/g, "/");
-            const relativePath = relative(rootPath, path).replace(/\\/g, "/");
-            if (entry.isDirectory()) {
-                yield yield __await({ type: "dir", name, path, parent, fullPath, relativePath });
-                yield __await(yield* __asyncDelegator(__asyncValues(walk(path, rootPath))));
+        const { join, resolve, relative } = yield __await(Promise.resolve().then(() => __importStar(require("jsr:@std/path@1"))));
+        try {
+            for (var _d = true, _e = __asyncValues(Deno.readDir(dir)), _f; _f = yield __await(_e.next()), _a = _f.done, !_a; _d = true) {
+                _c = _f.value;
+                _d = false;
+                const entry = _c;
+                const name = entry.name;
+                const parent = relative(rootPath, dir).replace(/\\/g, "/");
+                const path = join(dir, name).replace(/\\/g, "/");
+                const fullPath = resolve(dir, name).replace(/\\/g, "/");
+                const relativePath = relative(rootPath, path).replace(/\\/g, "/");
+                if (entry.isDirectory) {
+                    yield yield __await({ type: "dir", name, path, parent, fullPath, relativePath });
+                    yield __await(yield* __asyncDelegator(__asyncValues(walk(path, rootPath))));
+                }
+                else {
+                    yield yield __await({ type: "file", name, path, parent, fullPath, relativePath });
+                }
             }
-            else {
-                yield yield __await({ type: "file", name, path, parent, fullPath, relativePath });
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (!_d && !_a && (_b = _e.return)) yield __await(_b.call(_e));
             }
+            finally { if (e_2) throw e_2.error; }
         }
     });
 }
-//# sourceMappingURL=framework.js.map
+//# sourceMappingURL=framework.deno.js.map
