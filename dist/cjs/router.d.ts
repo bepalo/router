@@ -320,5 +320,7 @@ export interface SplitURL {
         index: number;
     }>;
 }
+export declare const ALL_METHODS: HttpMethod[];
+export declare const CRUD_METHODS: HttpMethod[];
 export default Router;
 //# sourceMappingURL=router.d.ts.map

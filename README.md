@@ -10,6 +10,20 @@
 
 **A fast, feature-rich HTTP router for modern JavaScript runtimes.** [jump to example](#example)
 
+## What is new in this version
+
+Please refer to the [change-log](CHANGELOG.md).
+
+Added `ALL` and `CRUD` shortcuts to method-path definition.
+
+```js
+router.handle("ALL /.**", ...); // HEAD|OPTIONS|GET|POST|PUT|PATCH|DELETE
+router.handle("CRUD /api/.**", ...); // GET|POST|PUT|PATCH|DELETE
+// instead of
+router.handle(["HEAD /", "OPTIONS /", ...], ...); // "ALL /"
+router.handle(["GET /api", "POST /api", ...], ...); // "CRUD /api"
+```
+
 ## 📑 Table of Contents
 
 1. [🏆 @bepalo/router](#-bepalorouter)
@@ -183,8 +197,8 @@ const router = new Router<CTXAddress>({
   ///...
 });
 
-// Global CORS
-router.filter("GET /.**", [
+// Global rate-limit and CORS
+router.filter("ALL /.**", [
   limitRate({
     key: (req, ctx) => ctx.address.address, // used to identify client
     maxTokens: 30,
@@ -198,31 +212,22 @@ router.filter("GET /.**", [
 ]);
 
 // Rate limiting for API
-router.filter(
-  [
-    "GET /api/.**",
-    "POST /api/.**",
-    "PUT /api/.**",
-    "PATCH /api/.**",
-    "DELETE /api/.**",
-  ],
-  [
-    limitRate({
-      key: (req, ctx) => ctx.address.address, // used to identify client
-      maxTokens: 100,
-      refillInterval: 30_000, // every 30 seconds
-      refillRate: 50, // 50 tokens every refillInterval
-      setXRateLimitHeaders: true,
-    }),
-    cors({
-      origins: ["http://localhost:3000", "https://example.com"],
-      methods: ["GET", "POST", "PUT", "DELETE"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-      credentials: true,
-      endHere: true,
-    }),
-  ],
-);
+router.filter("CRUD /api/.**",[
+  limitRate({
+    key: (req, ctx) => ctx.address.address, // used to identify client
+    maxTokens: 100,
+    refillInterval: 30_000, // every 30 seconds
+    refillRate: 50, // 50 tokens every refillInterval
+    setXRateLimitHeaders: true,
+  }),
+  cors({
+    origins: ["http://localhost:3000", "https://example.com"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    endHere: true,
+  }),
+]);
 
 // Main route
 router.handle("GET /", () =>

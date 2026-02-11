@@ -34,7 +34,7 @@ export type HttpPath = `/${string}`;
  * const route: MethodPath = "POST /api/users";
  * const route: MethodPath = "DELETE /api/users/:id";
  */
-export type MethodPath = `${HttpMethod} ${HttpPath}`;
+export type MethodPath = `${HttpMethod | "ALL" | "CRUD"} ${HttpPath}`;
 /**
  * Types of handlers in the router pipeline.
  * Each handler type has a specific role in request processing:

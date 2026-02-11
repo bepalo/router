@@ -836,6 +836,24 @@ export interface SplitURL {
   >;
 }
 
+export const ALL_METHODS: HttpMethod[] = [
+  "HEAD",
+  "OPTIONS",
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+];
+
+export const CRUD_METHODS: HttpMethod[] = [
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+];
+
 /**
  * Splits URL patterns into their components for routing.
  * Supports wildcards (*), super-globs (**), and parameters (:param).
@@ -850,39 +868,55 @@ function splitUrl(urls: MethodPath | Array<MethodPath>): Array<SplitURL> {
   urls = (Array.isArray(urls) ? urls : [urls]) as Array<MethodPath>;
   let splitUrls: Array<SplitURL> = [];
   for (const mp of urls) {
-    const [method, pathname] = mp
+    const [_method, pathname] = mp
       .split(" ", 2)
-      .map((mu: string) => mu.trim()) as [HttpMethod, HttpPath];
+      .map((mu: string) => mu.trim()) as [
+      HttpMethod | "ALL" | "CRUD",
+      HttpPath,
+    ];
     const params: Map<number, { name: string; index: number }> = new Map();
     const nodes: Array<string> = [];
     const pathNodes = pathname.substring(1).split("/");
     const lastPathNode =
       pathNodes.length > 0 && pathNodes[pathNodes.length - 1];
-    // check the last path node to match '***'
-    if (lastPathNode === ".**") {
-      const curNodes = pathNodes.slice(0, pathNodes.length - 1);
-      splitUrls.push({ method, pathname, nodes: [...curNodes, ""], params });
-      splitUrls.push({ method, pathname, nodes: [...curNodes, "**"], params });
-    } else if (lastPathNode === ".*") {
-      const curNodes = pathNodes.splice(0, pathNodes.length - 1);
-      splitUrls.push({ method, pathname, nodes: [...curNodes, ""], params });
-      splitUrls.push({ method, pathname, nodes: [...curNodes, "*"], params });
-    } else {
-      // process the path nodes
-      for (let index = 0; index < pathNodes.length; index++) {
-        const pathNode = pathNodes[index];
-        if (pathNode === ".**" && index < pathNodes.length - 1) {
-          throw new Error("Super-Glob not at the end of pathname");
+    const methods =
+      _method === "ALL"
+        ? ALL_METHODS
+        : _method === "CRUD"
+          ? CRUD_METHODS
+          : [_method];
+    for (const method of methods) {
+      // check the last path node to match globs '.**'
+      if (lastPathNode === ".**") {
+        const curNodes = pathNodes.slice(0, pathNodes.length - 1);
+        splitUrls.push({ method, pathname, nodes: [...curNodes, ""], params });
+        splitUrls.push({
+          method,
+          pathname,
+          nodes: [...curNodes, "**"],
+          params,
+        });
+      } else if (lastPathNode === ".*") {
+        const curNodes = pathNodes.splice(0, pathNodes.length - 1);
+        splitUrls.push({ method, pathname, nodes: [...curNodes, ""], params });
+        splitUrls.push({ method, pathname, nodes: [...curNodes, "*"], params });
+      } else {
+        // process the path nodes
+        for (let index = 0; index < pathNodes.length; index++) {
+          const pathNode = pathNodes[index];
+          if (pathNode === ".**" && index < pathNodes.length - 1) {
+            throw new Error("Super-Glob not at the end of pathname");
+          }
+          if (pathNode.startsWith(":")) {
+            const name = pathNode.substring(1);
+            params.set(index, { name, index });
+            nodes.push("*");
+          } else {
+            nodes.push(pathNode);
+          }
         }
-        if (pathNode.startsWith(":")) {
-          const name = pathNode.substring(1);
-          params.set(index, { name, index });
-          nodes.push("*");
-        } else {
-          nodes.push(pathNode);
-        }
+        splitUrls.push({ method, pathname, nodes, params });
       }
-      splitUrls.push({ method, pathname, nodes, params });
     }
   }
   return splitUrls;
