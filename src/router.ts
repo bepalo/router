@@ -148,7 +148,7 @@ export interface RouterConfig<Context extends RouterContext = RouterContext> {
   defaultHeaders?: Array<HeaderTuple> | { (): Array<HeaderTuple> };
   defaultCatcher?: Handler<Context & CTXError>;
   defaultFallback?: Handler<Context>;
-  enable?: HandlerEnable;
+  enable?: Partial<HandlerEnable>;
   normalizeTrailingSlash?: boolean;
 }
 
@@ -310,7 +310,14 @@ export class Router<
       this.#defaultHeaders = config.defaultHeaders;
     }
     if (config?.enable) {
-      this.#enable = config.enable;
+      this.#enable = {
+        hooks: false,
+        afters: false,
+        filters: false,
+        fallbacks: false,
+        catchers: false,
+        ...config.enable,
+      };
     }
     if (config?.defaultCatcher) {
       this.#defaultCatcher = config.defaultCatcher;

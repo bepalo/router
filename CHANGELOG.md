@@ -8,9 +8,18 @@ Generated on: 2026-02-11
 
 <!-- Newest first (most recent → oldest) -->
 
-## v1.8.27 — 2026-02-12
+## v1.8.27 — 2026-02-15
 
 - **Hash:** TBA
+- **Author:** Natnael Eshetu
+- **Changes:** v1.9.28 enhancement & docs
+- make Router config `enable` partial and default to false
+- add router.md doc
+- update README
+
+## v1.8.27 — 2026-02-12
+
+- **Hash:** 91a96267d6d538f234caf65157b0b0c638e0a069
 - **Author:** Natnael Eshetu
 - **Changes:** v1.8.27 bug fix
   - fix deno std-path library import issue

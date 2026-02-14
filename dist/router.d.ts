@@ -100,7 +100,7 @@ export interface RouterConfig<Context extends RouterContext = RouterContext> {
     };
     defaultCatcher?: Handler<Context & CTXError>;
     defaultFallback?: Handler<Context>;
-    enable?: HandlerEnable;
+    enable?: Partial<HandlerEnable>;
     normalizeTrailingSlash?: boolean;
 }
 /**

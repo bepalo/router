@@ -180,7 +180,7 @@ class Router {
             __classPrivateFieldSet(this, _Router_defaultHeaders, config.defaultHeaders, "f");
         }
         if (config === null || config === void 0 ? void 0 : config.enable) {
-            __classPrivateFieldSet(this, _Router_enable, config.enable, "f");
+            __classPrivateFieldSet(this, _Router_enable, Object.assign({ hooks: false, afters: false, filters: false, fallbacks: false, catchers: false }, config.enable), "f");
         }
         if (config === null || config === void 0 ? void 0 : config.defaultCatcher) {
             __classPrivateFieldSet(this, _Router_defaultCatcher, config.defaultCatcher, "f");
