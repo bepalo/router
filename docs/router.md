@@ -272,11 +272,75 @@ interface HandlerOptions {
 }
 ```
 
+### Router Context
+
+Each handler receives a context object and they can be extended as needed.
+
+```ts
+interface RouterContext {
+  params: Record<string, string>; // Route parameters
+  headers: Headers; // Response headers
+  response?: Response; // Final response
+  error?: Error; // Uncertain error
+  found: {
+    hooks: boolean; // Whether hooks were found
+    afters: boolean; // Whether afters were found
+    filters: boolean; // Whether filters were found
+    handlers: boolean; // Whether handlers were found
+    fallbacks: boolean; // Whether fallbacks were found
+    catchers: boolean; // Whether catchers were found
+  };
+}
+```
+
 #### Common Types
 
 ```ts
+type HttpPath = `/${string}`;
+
 // 'GET /', 'ALL /.**', 'CRUD /api/**'
 type MethodPath = `${HttpMethod | "ALL" | "CRUD"} ${HttpPath}`;
+
+type HandlerType =
+  | "filter"
+  | "hook"
+  | "handler"
+  | "fallback"
+  | "catcher"
+  | "after";
+
+type HandlerResponse =
+  | Response
+  | void
+  | boolean
+  | Promise<Response | void | boolean>;
+
+type BoundHandler<XContext = {}> = (
+  this: Router<XContext>,
+  req: Request,
+  ctx: RouterContext<XContext>,
+) => HandlerResponse;
+
+type FreeHandler<XContext = {}> = (
+  req: Request,
+  ctx: RouterContext<XContext>,
+) => HandlerResponse;
+
+type Handler<XContext = {}> = FreeHandler<XContext> | BoundHandler<XContext>;
+
+type Pipeline<Context = {}> = Array<Handler<Context>>;
+
+type HeaderTuple = [string, string];
+
+interface SocketAddress {
+  address: string;
+  family: string;
+  port: number;
+}
+
+type CTXError = { error: Error };
+
+type CTXAddress = { address: SocketAddress };
 ```
 
 #### Router Composition

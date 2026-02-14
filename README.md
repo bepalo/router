@@ -196,23 +196,15 @@ The router processes requests in this specific order:
 
 ### Router Context
 
-Each handler receives a context object with:
+Each handler receives a context object and they can be extended as needed.
 
 ```ts
 interface RouterContext {
   params: Record<string, string>; // Route parameters
   headers: Headers; // Response headers
-  address?: SocketAddress | null; // Client address
   response?: Response; // Final response
-  error?: Error; // Caught error
-  found: {
-    hooks: boolean; // Whether hooks were found
-    afters: boolean; // Whether afters were found
-    filters: boolean; // Whether filters were found
-    handlers: boolean; // Whether handlers were found
-    fallbacks: boolean; // Whether fallbacks were found
-    catchers: boolean; // Whether catchers were found
-  };
+  error?: Error; // Uncertain error
+  found: { ...: boolean }; // which handler types were found
 }
 ```
 
