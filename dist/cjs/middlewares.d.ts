@@ -251,11 +251,25 @@ export declare const authorize: <XContext = {}>({ allowRole, forbidRole, forPerm
  * users.set("admin", { pass: "secret123", role: "admin", permissions: ["read", "write"] });
  * users.set("user", { pass: "password", role: "user", permissions: ["read"] });
  *
- * const basicAuth = authBasic({
+ * const basicAuth = parseAuthBasic({
  *   credentials: users,
  *   realm: "My API",
  *   ctxProp: "user" // Store in ctx.user instead of ctx.basicAuth
  * });
+ */
+export declare const parseAuthBasic: <XContext extends CTXBasicAuth, prop extends string = "basicAuth">({ credentials, type, separator, realm, ctxProp, endHere, }: {
+    credentials: Map<string, {
+        password: string;
+        role: string;
+    } & Record<string, any>>;
+    type?: "raw" | "base64";
+    separator?: ":" | " ";
+    realm?: string;
+    ctxProp?: prop;
+    endHere?: boolean;
+}) => FreeHandler<XContext & CTXBasicAuth>;
+/**
+ * @deprecated use `parseAuthBasic`
  */
 export declare const authBasic: <XContext extends CTXBasicAuth, prop extends string = "basicAuth">({ credentials, type, separator, realm, ctxProp, endHere, }: {
     credentials: Map<string, {
@@ -293,14 +307,14 @@ export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext<{
  * // API key validation with database lookup
  * const apiKeys = new Set(["abc123", "def456", "ghi789"]);
  *
- * const apiKeyAuth = authAPIKey({
+ * const apiKeyAuth = parseAuthAPIKey({
  *   verify: (apiKey) => apiKeys.has(apiKey),
  *   ctxProp: "apiClient" // Store in ctx.apiClient
  * });
  *
  * @example
  * // API key with additional validation
- * const apiKeyAuth = authAPIKey({
+ * const apiKeyAuth = parseAuthAPIKey({
  *   verify: (apiKey) => {
  *     // Validate format
  *     if (!apiKey.startsWith("sk_")) return false;
@@ -310,7 +324,7 @@ export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext<{
  *   }
  * });
  */
-export declare const authAPIKey: <XContext extends CTXAPIKeyAuth, prop extends string = "apiKeyAuth">({ verify, ctxProp, endHere, }: {
+export declare const parseAuthAPIKey: <XContext extends CTXAPIKeyAuth, prop extends string = "apiKeyAuth">({ verify, ctxProp, endHere, }: {
     verify: (apiKey: string) => boolean;
     ctxProp?: prop;
     endHere?: boolean;
@@ -329,6 +343,14 @@ export type CTXJWTAuth<Payload extends JwtPayload<{}>, prop extends string = "jw
     } & Record<string, any>;
 }>;
 /**
+ * @deprecated use `parseAuthAPIKey`
+ */
+export declare const authAPIKey: <XContext extends CTXAPIKeyAuth, prop extends string = "apiKeyAuth">({ verify, ctxProp, endHere, }: {
+    verify: (apiKey: string) => boolean;
+    ctxProp?: prop;
+    endHere?: boolean;
+}) => FreeHandler<XContext & CTXAPIKeyAuth>;
+/**
  * Creates a JWT (JSON Web Token) Authentication middleware.
  * Validates Bearer tokens from Authorization header.
  *
@@ -346,7 +368,7 @@ export type CTXJWTAuth<Payload extends JwtPayload<{}>, prop extends string = "jw
  * // Simple JWT authentication
  * const jwt = new JWT({ secret: process.env.JWT_SECRET });
  *
- * const jwtAuth = authJWT({
+ * const jwtAuth = parseAuthJWT({
  *   jwt,
  *   validate: (payload) => payload.exp > Date.now() / 1000, // Check expiration
  *   ctxProp: "auth" // Store in ctx.auth
@@ -362,7 +384,7 @@ export type CTXJWTAuth<Payload extends JwtPayload<{}>, prop extends string = "jw
  *
  * const jwt = new JWT<MyPayload>({ secret: process.env.JWT_SECRET });
  *
- * const jwtAuth = authJWT<MyPayload>({
+ * const jwtAuth = parseAuthJWT<MyPayload>({
  *   jwt,
  *   validate: (payload) => {
  *     // Custom business logic
@@ -375,6 +397,16 @@ export type CTXJWTAuth<Payload extends JwtPayload<{}>, prop extends string = "jw
  *     maxAge: "2h"
  *   }
  * });
+ */
+export declare const parseAuthJWT: <Payload extends JwtPayload<{}>, XContext extends CTXJWTAuth<Payload, prop>, prop extends string = "jwtAuth">({ jwt, validate, verifyOptions, ctxProp, endHere, }: {
+    jwt: JWT<Payload>;
+    validate?: (payload: Payload) => boolean;
+    verifyOptions?: JwtVerifyOptions;
+    ctxProp?: prop;
+    endHere?: boolean;
+}) => FreeHandler<XContext & CTXJWTAuth<Payload>>;
+/**
+ * @deprecated use `parseAuthJWT`
  */
 export declare const authJWT: <Payload extends JwtPayload<{}>, XContext extends CTXJWTAuth<Payload, prop>, prop extends string = "jwtAuth">({ jwt, validate, verifyOptions, ctxProp, endHere, }: {
     jwt: JWT<Payload>;

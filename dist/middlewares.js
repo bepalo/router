@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authJWT = exports.authAPIKey = exports.authBasic = exports.authorize = exports.authenticate = exports.cors = exports.limitRate = exports.parseBody = exports.parseCookie = exports.parseQuery = void 0;
+exports.authJWT = exports.parseAuthJWT = exports.authAPIKey = exports.parseAuthAPIKey = exports.authBasic = exports.parseAuthBasic = exports.authorize = exports.authenticate = exports.cors = exports.limitRate = exports.parseBody = exports.parseCookie = exports.parseQuery = void 0;
 const helpers_1 = require("./helpers");
 const cache_1 = require("@bepalo/cache");
 const time_1 = require("@bepalo/time");
@@ -277,6 +277,8 @@ const cors = (config) => {
         const origin = req.headers.get("origin");
         let corsOrigin = null;
         if (!origin) {
+            if (endHere)
+                return true;
             return;
         }
         if (globOrigin) {
@@ -288,6 +290,8 @@ const cors = (config) => {
         if (!corsOrigin) {
             if (varyOrigin)
                 ctx.headers.append("Vary", "Origin");
+            if (endHere)
+                return true;
             return;
         }
         ctx.headers.set("Access-Control-Allow-Origin", corsOrigin);
@@ -409,13 +413,13 @@ exports.authorize = authorize;
  * users.set("admin", { pass: "secret123", role: "admin", permissions: ["read", "write"] });
  * users.set("user", { pass: "password", role: "user", permissions: ["read"] });
  *
- * const basicAuth = authBasic({
+ * const basicAuth = parseAuthBasic({
  *   credentials: users,
  *   realm: "My API",
  *   ctxProp: "user" // Store in ctx.user instead of ctx.basicAuth
  * });
  */
-const authBasic = ({ credentials, type = "raw", separator = ":", realm = "Protected", ctxProp = "basicAuth", endHere = false, }) => {
+const parseAuthBasic = ({ credentials, type = "raw", separator = ":", realm = "Protected", ctxProp = "basicAuth", endHere = false, }) => {
     return (req, ctx) => {
         const authorization = req.headers.get("authorization");
         ctx.headers.set("WWW-Authenticate", `Basic realm="${realm}", charset="UTF-8"`);
@@ -447,7 +451,11 @@ const authBasic = ({ credentials, type = "raw", separator = ":", realm = "Protec
             return true;
     };
 };
-exports.authBasic = authBasic;
+exports.parseAuthBasic = parseAuthBasic;
+/**
+ * @deprecated use `parseAuthBasic`
+ */
+exports.authBasic = exports.parseAuthBasic;
 /**
  * Creates an API Key Authentication middleware.
  * Validates API keys from X-API-Key header.
@@ -463,14 +471,14 @@ exports.authBasic = authBasic;
  * // API key validation with database lookup
  * const apiKeys = new Set(["abc123", "def456", "ghi789"]);
  *
- * const apiKeyAuth = authAPIKey({
+ * const apiKeyAuth = parseAuthAPIKey({
  *   verify: (apiKey) => apiKeys.has(apiKey),
  *   ctxProp: "apiClient" // Store in ctx.apiClient
  * });
  *
  * @example
  * // API key with additional validation
- * const apiKeyAuth = authAPIKey({
+ * const apiKeyAuth = parseAuthAPIKey({
  *   verify: (apiKey) => {
  *     // Validate format
  *     if (!apiKey.startsWith("sk_")) return false;
@@ -480,7 +488,7 @@ exports.authBasic = authBasic;
  *   }
  * });
  */
-const authAPIKey = ({ verify, ctxProp = "apiKeyAuth", endHere = false, }) => {
+const parseAuthAPIKey = ({ verify, ctxProp = "apiKeyAuth", endHere = false, }) => {
     return (req, ctx) => {
         const apiKey = req.headers.get("X-API-Key");
         if (!apiKey || !verify(apiKey))
@@ -492,7 +500,11 @@ const authAPIKey = ({ verify, ctxProp = "apiKeyAuth", endHere = false, }) => {
             return true;
     };
 };
-exports.authAPIKey = authAPIKey;
+exports.parseAuthAPIKey = parseAuthAPIKey;
+/**
+ * @deprecated use `parseAuthAPIKey`
+ */
+exports.authAPIKey = exports.parseAuthAPIKey;
 /**
  * Creates a JWT (JSON Web Token) Authentication middleware.
  * Validates Bearer tokens from Authorization header.
@@ -511,7 +523,7 @@ exports.authAPIKey = authAPIKey;
  * // Simple JWT authentication
  * const jwt = new JWT({ secret: process.env.JWT_SECRET });
  *
- * const jwtAuth = authJWT({
+ * const jwtAuth = parseAuthJWT({
  *   jwt,
  *   validate: (payload) => payload.exp > Date.now() / 1000, // Check expiration
  *   ctxProp: "auth" // Store in ctx.auth
@@ -527,7 +539,7 @@ exports.authAPIKey = authAPIKey;
  *
  * const jwt = new JWT<MyPayload>({ secret: process.env.JWT_SECRET });
  *
- * const jwtAuth = authJWT<MyPayload>({
+ * const jwtAuth = parseAuthJWT<MyPayload>({
  *   jwt,
  *   validate: (payload) => {
  *     // Custom business logic
@@ -541,7 +553,7 @@ exports.authAPIKey = authAPIKey;
  *   }
  * });
  */
-const authJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", endHere = false, }) => {
+const parseAuthJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", endHere = false, }) => {
     return (req, ctx) => {
         var _a;
         const authorization = req.headers.get("authorization");
@@ -564,5 +576,9 @@ const authJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", endHere = 
             return true;
     };
 };
-exports.authJWT = authJWT;
+exports.parseAuthJWT = parseAuthJWT;
+/**
+ * @deprecated use `parseAuthJWT`
+ */
+exports.authJWT = exports.parseAuthJWT;
 //# sourceMappingURL=middlewares.js.map

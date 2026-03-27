@@ -559,13 +559,13 @@ export const authorize = <XContext = {}>({
  * users.set("admin", { pass: "secret123", role: "admin", permissions: ["read", "write"] });
  * users.set("user", { pass: "password", role: "user", permissions: ["read"] });
  *
- * const basicAuth = authBasic({
+ * const basicAuth = parseAuthBasic({
  *   credentials: users,
  *   realm: "My API",
  *   ctxProp: "user" // Store in ctx.user instead of ctx.basicAuth
  * });
  */
-export const authBasic = <
+export const parseAuthBasic = <
   XContext extends CTXBasicAuth,
   prop extends string = "basicAuth",
 >({
@@ -616,6 +616,11 @@ export const authBasic = <
 };
 
 /**
+ * @deprecated use `parseAuthBasic`
+ */
+export const authBasic = parseAuthBasic;
+
+/**
  * Context type for API Key Authentication middleware.
  * @template {string} [prop="apiKeyAuth"] - Property name to store auth data in context
  * @typedef {RouterContext & {[K in prop]?: {apiKey: string} & Record<string, any>}} CTXAPIKeyAuth
@@ -641,14 +646,14 @@ export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext<{
  * // API key validation with database lookup
  * const apiKeys = new Set(["abc123", "def456", "ghi789"]);
  *
- * const apiKeyAuth = authAPIKey({
+ * const apiKeyAuth = parseAuthAPIKey({
  *   verify: (apiKey) => apiKeys.has(apiKey),
  *   ctxProp: "apiClient" // Store in ctx.apiClient
  * });
  *
  * @example
  * // API key with additional validation
- * const apiKeyAuth = authAPIKey({
+ * const apiKeyAuth = parseAuthAPIKey({
  *   verify: (apiKey) => {
  *     // Validate format
  *     if (!apiKey.startsWith("sk_")) return false;
@@ -658,7 +663,7 @@ export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext<{
  *   }
  * });
  */
-export const authAPIKey = <
+export const parseAuthAPIKey = <
   XContext extends CTXAPIKeyAuth,
   prop extends string = "apiKeyAuth",
 >({
@@ -698,6 +703,11 @@ export type CTXJWTAuth<
 }>;
 
 /**
+ * @deprecated use `parseAuthAPIKey`
+ */
+export const authAPIKey = parseAuthAPIKey;
+
+/**
  * Creates a JWT (JSON Web Token) Authentication middleware.
  * Validates Bearer tokens from Authorization header.
  *
@@ -715,7 +725,7 @@ export type CTXJWTAuth<
  * // Simple JWT authentication
  * const jwt = new JWT({ secret: process.env.JWT_SECRET });
  *
- * const jwtAuth = authJWT({
+ * const jwtAuth = parseAuthJWT({
  *   jwt,
  *   validate: (payload) => payload.exp > Date.now() / 1000, // Check expiration
  *   ctxProp: "auth" // Store in ctx.auth
@@ -731,7 +741,7 @@ export type CTXJWTAuth<
  *
  * const jwt = new JWT<MyPayload>({ secret: process.env.JWT_SECRET });
  *
- * const jwtAuth = authJWT<MyPayload>({
+ * const jwtAuth = parseAuthJWT<MyPayload>({
  *   jwt,
  *   validate: (payload) => {
  *     // Custom business logic
@@ -745,7 +755,7 @@ export type CTXJWTAuth<
  *   }
  * });
  */
-export const authJWT = <
+export const parseAuthJWT = <
   Payload extends JwtPayload<{}>,
   XContext extends CTXJWTAuth<Payload, prop>,
   prop extends string = "jwtAuth",
@@ -778,3 +788,8 @@ export const authJWT = <
     if (endHere) return true;
   };
 };
+
+/**
+ * @deprecated use `parseAuthJWT`
+ */
+export const authJWT = parseAuthJWT;
