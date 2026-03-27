@@ -232,6 +232,27 @@ export declare const authorize: <XContext = {}>({ allowRole, forbidRole, forPerm
     endHere?: boolean;
 }) => FreeHandler<Partial<CTXAuth> & XContext>;
 /**
+ *
+ * @template XContext - Additional context type to merge with CTXAuth.
+ * @param {Object} [options] - Configuration options.
+ * @param {Map<string,{ password: string; role: string } & Record<string, any>>} [options.credentials] - A map containing the entries of the credentials identified and indexed by username
+ * @param {"base64" | "raw"} [options.type="base64"] - The token format/type
+ * @param {":" | " "} [options.separator=":"] - The separator for username and password
+ * @param {string} [options.realm="Protected"] - The realm of the basic authentication
+ * @returns
+ */
+export declare const basicAuth: <XContext = {}>({ credentials, type, separator, realm, }: {
+    credentials: Map<string, {
+        password: string;
+        role: string;
+    } & Record<string, any>>;
+    type?: "base64" | "raw";
+    separator?: ":" | " ";
+    realm?: string;
+}) => {
+    (req: Request, ctx: RouterContext<CTXAuth & XContext>): Auth | Error;
+};
+/**
  * Creates a Basic Authentication middleware.
  * Supports RFC 7617 Basic Authentication scheme.
  *
@@ -239,7 +260,7 @@ export declare const authorize: <XContext = {}>({ allowRole, forbidRole, forPerm
  * @template {string} prop - Property name to store auth data in context
  * @param {Object} config - Basic Authentication configuration
  * @param {Map<string, {pass: string} & Record<string, any>>} config.credentials - Map of usernames to user data (must include 'pass')
- * @param {"raw"|"base64"} [config.type="raw"] - Credential encoding type
+ * @param {"base64"|"raw"} [config.type="base64"] - Credential encoding type
  * @param {":"|" "} [config.separator=":"] - Separator between username and password
  * @param {string} [config.realm="Protected"] - Authentication realm
  * @param {prop} [config.ctxProp="basicAuth"] - Context property name for auth data
@@ -257,7 +278,7 @@ export declare const authorize: <XContext = {}>({ allowRole, forbidRole, forPerm
  *   ctxProp: "user" // Store in ctx.user instead of ctx.basicAuth
  * });
  */
-export declare const parseAuthBasic: <XContext extends CTXBasicAuth, prop extends string = "basicAuth">({ credentials, type, separator, realm, ctxProp, endHere, }: {
+export declare const parseAuthBasic: <XContext = {}, prop extends string = "basicAuth">({ credentials, type, separator, realm, ctxProp, endHere, }: {
     credentials: Map<string, {
         password: string;
         role: string;
@@ -271,7 +292,7 @@ export declare const parseAuthBasic: <XContext extends CTXBasicAuth, prop extend
 /**
  * @deprecated use `parseAuthBasic`
  */
-export declare const authBasic: <XContext extends CTXBasicAuth, prop extends string = "basicAuth">({ credentials, type, separator, realm, ctxProp, endHere, }: {
+export declare const authBasic: <XContext = {}, prop extends string = "basicAuth">({ credentials, type, separator, realm, ctxProp, endHere, }: {
     credentials: Map<string, {
         password: string;
         role: string;
@@ -324,7 +345,7 @@ export type CTXAPIKeyAuth<prop extends string = "apiKeyAuth"> = RouterContext<{
  *   }
  * });
  */
-export declare const parseAuthAPIKey: <XContext extends CTXAPIKeyAuth, prop extends string = "apiKeyAuth">({ verify, ctxProp, endHere, }: {
+export declare const parseAuthAPIKey: <XContext = {}, prop extends string = "apiKeyAuth">({ verify, ctxProp, endHere, }: {
     verify: (apiKey: string) => boolean;
     ctxProp?: prop;
     endHere?: boolean;
@@ -345,7 +366,7 @@ export type CTXJWTAuth<Payload extends JwtPayload<{}>, prop extends string = "jw
 /**
  * @deprecated use `parseAuthAPIKey`
  */
-export declare const authAPIKey: <XContext extends CTXAPIKeyAuth, prop extends string = "apiKeyAuth">({ verify, ctxProp, endHere, }: {
+export declare const authAPIKey: <XContext = {}, prop extends string = "apiKeyAuth">({ verify, ctxProp, endHere, }: {
     verify: (apiKey: string) => boolean;
     ctxProp?: prop;
     endHere?: boolean;

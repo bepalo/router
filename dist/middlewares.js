@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authJWT = exports.parseAuthJWT = exports.authAPIKey = exports.parseAuthAPIKey = exports.authBasic = exports.parseAuthBasic = exports.authorize = exports.authenticate = exports.cors = exports.limitRate = exports.parseBody = exports.parseCookie = exports.parseQuery = void 0;
+exports.authJWT = exports.parseAuthJWT = exports.authAPIKey = exports.parseAuthAPIKey = exports.authBasic = exports.parseAuthBasic = exports.basicAuth = exports.authorize = exports.authenticate = exports.cors = exports.limitRate = exports.parseBody = exports.parseCookie = exports.parseQuery = void 0;
 const helpers_1 = require("./helpers");
 const cache_1 = require("@bepalo/cache");
 const time_1 = require("@bepalo/time");
@@ -394,6 +394,48 @@ const authorize = ({ allowRole, forbidRole, forPermissions, hasPermission, endHe
 };
 exports.authorize = authorize;
 /**
+ *
+ * @template XContext - Additional context type to merge with CTXAuth.
+ * @param {Object} [options] - Configuration options.
+ * @param {Map<string,{ password: string; role: string } & Record<string, any>>} [options.credentials] - A map containing the entries of the credentials identified and indexed by username
+ * @param {"base64" | "raw"} [options.type="base64"] - The token format/type
+ * @param {":" | " "} [options.separator=":"] - The separator for username and password
+ * @param {string} [options.realm="Protected"] - The realm of the basic authentication
+ * @returns
+ */
+const basicAuth = ({ credentials, type = "base64", separator = ":", realm = "Protected", }) => {
+    return (req, ctx) => {
+        const authorization = req.headers.get("authorization");
+        ctx.headers.set("WWW-Authenticate", `Basic realm="${realm}", charset="UTF-8"`);
+        if (!authorization)
+            return new Error("Missing authorization header");
+        const [scheme, creds] = authorization.split(" ", 2);
+        if (scheme.toLowerCase() !== "basic" || !creds)
+            return new Error("Invalid authorization scheme");
+        let xcreds = creds;
+        if (type === "base64") {
+            try {
+                xcreds = atob(creds);
+            }
+            catch (_a) {
+                return new Error("Bad authorization token");
+            }
+        }
+        const [username, password] = xcreds.split(separator, 2);
+        if (!username || !password)
+            return new Error("Bad authorization token");
+        const user = credentials.get(username);
+        if (!user || password !== user.password)
+            return new Error("Invalid credentials");
+        const auth = {
+            id: username,
+            role: user.role,
+        };
+        return auth;
+    };
+};
+exports.basicAuth = basicAuth;
+/**
  * Creates a Basic Authentication middleware.
  * Supports RFC 7617 Basic Authentication scheme.
  *
@@ -401,7 +443,7 @@ exports.authorize = authorize;
  * @template {string} prop - Property name to store auth data in context
  * @param {Object} config - Basic Authentication configuration
  * @param {Map<string, {pass: string} & Record<string, any>>} config.credentials - Map of usernames to user data (must include 'pass')
- * @param {"raw"|"base64"} [config.type="raw"] - Credential encoding type
+ * @param {"base64"|"raw"} [config.type="base64"] - Credential encoding type
  * @param {":"|" "} [config.separator=":"] - Separator between username and password
  * @param {string} [config.realm="Protected"] - Authentication realm
  * @param {prop} [config.ctxProp="basicAuth"] - Context property name for auth data
