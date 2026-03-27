@@ -362,6 +362,7 @@ export const cors = <XContext = {}>(config?: {
     const origin = req.headers.get("origin");
     let corsOrigin: string | null = null;
     if (!origin) {
+      if (endHere) return true;
       return;
     }
     if (globOrigin) {
@@ -371,6 +372,7 @@ export const cors = <XContext = {}>(config?: {
     }
     if (!corsOrigin) {
       if (varyOrigin) ctx.headers.append("Vary", "Origin");
+      if (endHere) return true;
       return;
     }
     ctx.headers.set("Access-Control-Allow-Origin", corsOrigin);
