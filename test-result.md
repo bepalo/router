@@ -2,16 +2,16 @@
 
 | 🕙 Start time | ⌛ Duration |
 | --- | ---: |
-| 2/11/2026, 7:32:05 PM | 0.469 s |
+| 4/4/2026, 12:08:32 PM | 0.816 s |
 
 | | ✅ Passed | ❌ Failed | ⏩ Skipped | 🚧 Todo | ⚪ Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
 |Test Suites|29|0|0|0|29|
 |Tests|138|0|0|0|138|
 
-## ✅ <a id="file0" href="#file0">tests\helpers.test.js</a>
+## ✅ <a id="file0" href="#file0">tests/helpers.test.js</a>
 
-58 passed, 0 failed, 0 skipped, 0 todo, done in 43.23680000000002 s
+58 passed, 0 failed, 0 skipped, 0 todo, done in 67.49869400000011 s
 
 ```
 ✅ Response Helpers › status / redirect
@@ -91,9 +91,9 @@
 ✅ Response Helpers
 ```
 
-## ✅ <a id="file1" href="#file1">tests\middlewares.test.js</a>
+## ✅ <a id="file1" href="#file1">tests/middlewares.test.js</a>
 
-20 passed, 0 failed, 0 skipped, 0 todo, done in 22.971200000000067 s
+20 passed, 0 failed, 0 skipped, 0 todo, done in 37.34939499999996 s
 
 ```
 ✅ Middlewares
@@ -105,23 +105,23 @@
    ✅ authenticate should set ctx.auth when parseAuth returns Auth
    ✅ authorize should return 401 when no auth present
    ✅ authorize should forbid when role not allowed
-   ✅ authBasic should authenticate raw credentials and set ctx property
-   ✅ authAPIKey should set ctx when key verified
-   ✅ authJWT should verify token and populate ctx
+   ✅ parseAuthBasic should authenticate raw credentials and set ctx property
+   ✅ parseAuthAPIKey should set ctx when key verified
+   ✅ parseAuthJWT should verify token and populate ctx
    ✅ parseBody should return 415 for unsupported content-type
    ✅ parseBody should return 400 on malformed payload
    ✅ limitRate should throw when neither refillInterval nor refillRate provided
    ✅ limitRate with refillInterval should decrement tokens and return 429 when exhausted
    ✅ cors throws when credentials true with wildcard origin
-   ✅ authBasic should return 401 for invalid credentials and set WWW-Authenticate header
-   ✅ authAPIKey should return 401 when header missing or invalid
-   ✅ authJWT should return 401 when Authorization header missing
+   ✅ parseAuthBasic should return 401 for invalid credentials and set WWW-Authenticate header
+   ✅ parseAuthAPIKey should return 401 when header missing or invalid
+   ✅ parseAuthJWT should return 401 when Authorization header missing
    ✅ authenticate checkOnly should return false instead of response
 ```
 
-## ✅ <a id="file2" href="#file2">tests\route.override.test.js</a>
+## ✅ <a id="file2" href="#file2">tests/route.override.test.js</a>
 
-15 passed, 0 failed, 0 skipped, 0 todo, done in 16.37239999999997 s
+15 passed, 0 failed, 0 skipped, 0 todo, done in 30.16455699999983 s
 
 ```
 ✅ Route Override Tests
@@ -142,9 +142,9 @@
    ✅ single-segment route will throw due to override on wildcard in same position
 ```
 
-## ✅ <a id="file3" href="#file3">tests\router.test.js</a>
+## ✅ <a id="file3" href="#file3">tests/router.test.js</a>
 
-45 passed, 0 failed, 0 skipped, 0 todo, done in 34.21690000000001 s
+45 passed, 0 failed, 0 skipped, 0 todo, done in 62.09582799999998 s
 
 ```
 ✅ Router › Basics

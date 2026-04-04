@@ -338,17 +338,21 @@ exports.cors = cors;
  */
 const authenticate = ({ parseAuth, endHere = false, checkOnly = false, }) => {
     return function (req, ctx) {
-        var _a;
-        const auth = parseAuth(req, ctx);
-        if (!auth) {
-            return checkOnly ? false : (0, helpers_1.status)(401);
-        }
-        else if (auth instanceof Error) {
-            return checkOnly ? false : (0, helpers_1.status)(401, (_a = auth.message) !== null && _a !== void 0 ? _a : undefined);
-        }
-        ctx.auth = auth;
-        if (endHere)
-            return true;
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            let auth = parseAuth(req, ctx);
+            if (auth instanceof Promise)
+                auth = yield auth;
+            if (!auth) {
+                return checkOnly ? false : (0, helpers_1.status)(401);
+            }
+            else if (auth instanceof Error) {
+                return checkOnly ? false : (0, helpers_1.status)(401, (_a = auth.message) !== null && _a !== void 0 ? _a : undefined);
+            }
+            ctx.auth = auth;
+            if (endHere)
+                return true;
+        });
     };
 };
 exports.authenticate = authenticate;

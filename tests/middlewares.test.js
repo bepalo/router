@@ -5,9 +5,9 @@ import {
   cors,
   authenticate,
   authorize,
-  authBasic,
-  authAPIKey,
-  authJWT,
+  parseAuthBasic,
+  parseAuthAPIKey,
+  parseAuthJWT,
 } from "@bepalo/router";
 
 describe("Middlewares", () => {
@@ -69,23 +69,23 @@ describe("Middlewares", () => {
     expect(ctx.headers.get("Access-Control-Allow-Headers")).toBeTruthy();
   });
 
-  test("authenticate should return 401 when parseAuth returns null", () => {
+  test("authenticate should return 401 when parseAuth returns null", async () => {
     const mw = authenticate({ parseAuth: () => null });
     const req = new Request("http://example.com");
     const ctx = {};
 
-    const res = mw(req, ctx);
+    const res = await mw(req, ctx);
 
     expect(res.status).toBe(401);
   });
 
-  test("authenticate should set ctx.auth when parseAuth returns Auth", () => {
+  test("authenticate should set ctx.auth when parseAuth returns Auth", async () => {
     const authObj = { id: "1", role: "user" };
     const mw = authenticate({ parseAuth: () => authObj });
     const req = new Request("http://example.com");
     const ctx = {};
 
-    const res = mw(req, ctx);
+    const res = await mw(req, ctx);
 
     expect(ctx.auth).toEqual(authObj);
     expect(res).toBeUndefined();
@@ -111,10 +111,10 @@ describe("Middlewares", () => {
     expect(res.status).toBe(403);
   });
 
-  test("authBasic should authenticate raw credentials and set ctx property", () => {
+  test("parseAuthBasic should authenticate raw credentials and set ctx property", () => {
     const creds = new Map();
     creds.set("john", { password: "secret", role: "user" });
-    const mw = authBasic({ credentials: creds, type: "raw" });
+    const mw = parseAuthBasic({ credentials: creds, type: "raw" });
     const req = new Request("http://example.com", {
       headers: { Authorization: "Basic john:secret" },
     });
@@ -126,8 +126,8 @@ describe("Middlewares", () => {
     expect(ctx.basicAuth).toEqual({ username: "john", role: "user" });
   });
 
-  test("authAPIKey should set ctx when key verified", () => {
-    const mw = authAPIKey({ verify: (k) => k === "goodkey" });
+  test("parseAuthAPIKey should set ctx when key verified", () => {
+    const mw = parseAuthAPIKey({ verify: (k) => k === "goodkey" });
     const req = new Request("http://example.com", {
       headers: { "X-API-Key": "goodkey" },
     });
@@ -139,11 +139,11 @@ describe("Middlewares", () => {
     expect(res).toBeUndefined();
   });
 
-  test("authJWT should verify token and populate ctx", () => {
+  test("parseAuthJWT should verify token and populate ctx", () => {
     const jwt = {
       verifySync: (token) => ({ payload: { id: "1", role: "user" }, error: null }),
     };
-    const mw = authJWT({ jwt });
+    const mw = parseAuthJWT({ jwt });
     const req = new Request("http://example.com", {
       headers: { Authorization: "Bearer sometoken" },
     });
@@ -223,10 +223,10 @@ describe("Middlewares", () => {
     );
   });
 
-  test("authBasic should return 401 for invalid credentials and set WWW-Authenticate header", () => {
+  test("parseAuthBasic should return 401 for invalid credentials and set WWW-Authenticate header", () => {
     const creds = new Map();
     creds.set("john", { pass: "secret", role: "user" });
-    const mw = authBasic({ credentials: creds, type: "raw" });
+    const mw = parseAuthBasic({ credentials: creds, type: "raw" });
     const req = new Request("http://example.com", {
       headers: { Authorization: "Basic john:wrong" },
     });
@@ -238,8 +238,8 @@ describe("Middlewares", () => {
     expect(ctx.headers.get("WWW-Authenticate")).toBeTruthy();
   });
 
-  test("authAPIKey should return 401 when header missing or invalid", () => {
-    const mw = authAPIKey({ verify: (k) => k === "goodkey" });
+  test("parseAuthAPIKey should return 401 when header missing or invalid", () => {
+    const mw = parseAuthAPIKey({ verify: (k) => k === "goodkey" });
     const req = new Request("http://example.com");
     const ctx = {};
 
@@ -248,8 +248,8 @@ describe("Middlewares", () => {
     expect(res.status).toBe(401);
   });
 
-  test("authJWT should return 401 when Authorization header missing", () => {
-    const mw = authJWT({ jwt: { verifySync: () => ({ payload: null, error: null }) } });
+  test("parseAuthJWT should return 401 when Authorization header missing", () => {
+    const mw = parseAuthJWT({ jwt: { verifySync: () => ({ payload: null, error: null }) } });
     const req = new Request("http://example.com");
     const ctx = {};
 
@@ -258,12 +258,12 @@ describe("Middlewares", () => {
     expect(res.status).toBe(401);
   });
 
-  test("authenticate checkOnly should return false instead of response", () => {
+  test("authenticate checkOnly should return false instead of response", async () => {
     const mw = authenticate({ parseAuth: () => null, checkOnly: true });
     const req = new Request("http://example.com");
     const ctx = {};
 
-    const res = mw(req, ctx);
+    const res = await mw(req, ctx);
 
     expect(res).toBe(false);
   });

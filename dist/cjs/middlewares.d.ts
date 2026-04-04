@@ -188,7 +188,7 @@ export interface CTXAuth {
 /**
  * auth context parser for authenticate middleware
  */
-export type ParseAuthFn<XContext = {}> = (req: Request, ctx: RouterContext<Partial<CTXAuth> & XContext>) => Auth | Error | null | undefined;
+export type ParseAuthFn<XContext = {}> = (req: Request, ctx: RouterContext<Partial<CTXAuth> & XContext>) => Promise<Auth | Error | null | undefined> | Auth | Error | null | undefined;
 /**
  * Middleware to authenticate a request.
  *

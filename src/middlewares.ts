@@ -445,7 +445,7 @@ export interface CTXAuth {
 export type ParseAuthFn<XContext = {}> = (
   req: Request,
   ctx: RouterContext<Partial<CTXAuth> & XContext>,
-) => Auth | Error | null | undefined;
+) => Promise<Auth | Error | null | undefined> | Auth | Error | null | undefined;
 
 /**
  * Middleware to authenticate a request.
@@ -469,8 +469,9 @@ export const authenticate = <XContext = {}>({
   endHere?: boolean;
   checkOnly?: boolean;
 }): FreeHandler<Partial<CTXAuth> & XContext> => {
-  return function (req, ctx) {
-    const auth = parseAuth(req, ctx);
+  return async function (req, ctx) {
+    let auth = parseAuth(req, ctx);
+    if (auth instanceof Promise) auth = await auth;
     if (!auth) {
       return checkOnly ? false : status(401);
     } else if (auth instanceof Error) {
