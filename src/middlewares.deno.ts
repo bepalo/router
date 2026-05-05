@@ -1,9 +1,13 @@
 import { parseCookieFromRequest, status } from "./helpers.ts";
 import type { RouterContext } from "./router.ts";
 import type { FreeHandler, HttpMethod, CTXAddress } from "./types.ts";
-import { Cache, CacheConfig } from "jsr:@bepalo/cache/mod.ts";
-import { JWT, JwtPayload, JwtVerifyOptions } from "jsr:@bepalo/jwt/mod.ts";
-import { Time } from "jsr:@bepalo/time/mod.ts";
+import { Cache, CacheConfig } from "jsr:@bepalo/cache@^1.0.3/mod.ts";
+import {
+  JWT,
+  JwtPayload,
+  JwtVerifyOptions,
+} from "jsr:@bepalo/jwt@^2.0.9/mod.ts";
+import { Time } from "jsr:@bepalo/time@^1.2.11/mod.ts";
 
 /**
  * Context object containing parsed query.
