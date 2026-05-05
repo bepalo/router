@@ -1,6 +1,6 @@
-import { status } from "./helpers";
-import { RouterContext } from "./router";
-import { Handler, FreeHandler } from "./types";
+import { status } from "./helpers.ts";
+import { RouterContext } from "./router.ts";
+import { FreeHandler } from "./types.ts";
 
 /**
  * Context object containing parsed upload data from multipart/form-data requests.

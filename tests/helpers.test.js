@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from "vitest";
-import {
+const {
   status,
   text,
   html,
@@ -17,7 +17,7 @@ import {
   respondWith,
   respondWithCatcher,
   redirect,
-} from "@bepalo/router";
+} = typeof Deno !== "undefined" ? await import("@bepalo/router") : await import("@bepalo/router");
 
 describe("Response Helpers", () => {
   describe("status / redirect", () => {
@@ -585,7 +585,6 @@ describe("Edge Cases", () => {
 
   describe("additional helpers", () => {
     test("redirect should set Location header and default 302 status", () => {
-      const { redirect } = require("@bepalo/router");
       const res = redirect("/login");
 
       expect(res.status).toBe(302);
@@ -601,7 +600,6 @@ describe("Edge Cases", () => {
     });
 
     test("respondWithCatcher should return catcher's response when handler throws", async () => {
-      const { respondWithCatcher, json } = require("@bepalo/router");
       const handler = () => {
         throw new Error("boom");
       };
@@ -622,7 +620,6 @@ describe("Edge Cases", () => {
     });
 
     test("octetStream with ArrayBuffer sets content-length header", () => {
-      const { octetStream } = require("@bepalo/router");
       const buf = new ArrayBuffer(16);
       const res = octetStream(buf);
 

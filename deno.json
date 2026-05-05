@@ -1,6 +1,6 @@
 {
   "name": "@bepalo/router",
-  "version": "1.11.32",
+  "version": "1.12.33",
   "exports": {
     ".": "./mod.ts",
     "./mod.ts": "./mod.ts"
@@ -35,7 +35,10 @@
     }
   },
   "imports": {
-    "@bepalo/router": "./src/router.ts"
+    "@bepalo/cache": "jsr:@bepalo/cache@^1.0.3",
+    "@bepalo/jwt": "jsr:@bepalo/jwt@^2.0.9",
+    "@bepalo/router": "./src/router.ts",
+    "@bepalo/time": "jsr:@bepalo/time@^1.2.11"
   },
   "keywords": ["router", "rest", "http", "https", "middleware"]
 }

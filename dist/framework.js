@@ -90,11 +90,9 @@ var __asyncGenerator = (this && this.__asyncGenerator) || function (thisArg, _ar
 };
 var _RouterFramework_rootPath, _RouterFramework_filterNode, _RouterFramework_processNode, _RouterFramework_onDir, _RouterFramework_loading, _RouterFramework_loaded;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RouterFramework = exports.DenoProxy = exports.isDeno = void 0;
+exports.RouterFramework = void 0;
 exports.walk = walk;
-const router_1 = __importStar(require("./router"));
-exports.isDeno = "Deno" in globalThis;
-exports.DenoProxy = exports.isDeno ? globalThis.Deno : {};
+const router_ts_1 = __importStar(require("./router.js"));
 const defaultValidExtensions = [".ts", ".js", ".tsx", ".jsx"];
 const defaultNodeFilter = (node) => defaultValidExtensions.some((ext) => node.name.endsWith(ext));
 const defaultNodeProcessor = (node) => {
@@ -102,7 +100,7 @@ const defaultNodeProcessor = (node) => {
     if (extensionIndex !== -1)
         node.name = node.name.slice(0, extensionIndex);
 };
-class RouterFramework extends router_1.default {
+class RouterFramework extends router_ts_1.default {
     get loading() {
         return __classPrivateFieldGet(this, _RouterFramework_loading, "f");
     }
@@ -180,7 +178,7 @@ class RouterFramework extends router_1.default {
                         for (const [method, methodHandlers] of Object.entries(handlers)) {
                             for (const [uchandlerType, pipeline] of Object.entries(methodHandlers)) {
                                 const handlerType = uchandlerType.toLowerCase();
-                                if ((0, router_1.isValidHttpMethod)(method) ||
+                                if ((0, router_ts_1.isValidHttpMethod)(method) ||
                                     method === "ALL" ||
                                     method === "CRUD") {
                                     this.setRoutes(handlerType, `${method} ${path}`, pipeline);

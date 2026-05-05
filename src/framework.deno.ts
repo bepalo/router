@@ -2,7 +2,7 @@ import Router, {
   isValidHttpMethod,
   RouterConfig,
   RouterContext,
-} from "./router";
+} from "./router.ts";
 import type {
   Handler,
   HandlerType,
@@ -10,7 +10,7 @@ import type {
   MethodPath,
   Pipeline,
   CTXError,
-} from "./types";
+} from "./types.ts";
 
 const defaultValidExtensions = [".ts", ".js", ".tsx", ".jsx"];
 const defaultNodeFilter = (node: DirWalkNode) =>

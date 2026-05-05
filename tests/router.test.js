@@ -1,17 +1,17 @@
 import { describe, test, expect, beforeEach, vi } from "vitest";
-import {
+const {
   Router,
   json,
   text,
   status,
-  authBasic,
+  parseAuthBasic,
   parseBody,
   parseCookie,
-  authAPIKey,
-  authJWT,
+  parseAuthAPIKey,
+  parseAuthJWT,
   limitRate,
   cors,
-} from "@bepalo/router";
+} = typeof Deno !== "undefined" ? await import("@bepalo/router") : await import("@bepalo/router");;
 
 function mockRequest(method, url, opts = {}) {
   const headers = new Headers(opts.headers ?? {});
@@ -404,7 +404,7 @@ describe("Router", () => {
   describe("Auth & Parsing Integrations", () => {
     test("basic auth filter blocks and allows correctly", async () => {
       const creds = new Map([["alice", { password: "pw" }]]);
-      const basic = authBasic({ credentials: creds, type: "base64" });
+      const basic = parseAuthBasic({ credentials: creds, type: "base64" });
       router.filter("GET /admin", basic);
       router.handle("GET /admin", (req, ctx) => text(`hi ${ctx.basicAuth?.username}`));
 
@@ -416,8 +416,8 @@ describe("Router", () => {
       expect(await r2.text()).toBe("hi alice");
     });
 
-    test("authAPIKey allows valid key and blocks invalid", async () => {
-      const mw = authAPIKey({ verify: (k) => k === 'ok' });
+    test("parseAuthAPIKey allows valid key and blocks invalid", async () => {
+      const mw = parseAuthAPIKey({ verify: (k) => k === 'ok' });
       router.filter('GET /key', mw);
       router.handle('GET /key', (req, ctx) => text(ctx.apiKeyAuth.apiKey));
 
@@ -428,9 +428,9 @@ describe("Router", () => {
       expect(await r2.text()).toBe('ok');
     });
 
-    test("authJWT populates ctx when token valid", async () => {
+    test("parseAuthJWT populates ctx when token valid", async () => {
       const jwt = { verifySync: (t) => ({ payload: { sub: '1' }, error: null }) };
-      const mw = authJWT({ jwt });
+      const mw = parseAuthJWT({ jwt });
       router.filter('GET /jwt', mw);
       router.handle('GET /jwt', (req, ctx) => json(ctx.jwtAuth.payload));
 

@@ -1,7 +1,7 @@
-import Router from "./router";
-import type { BoundHandler, HttpMethod } from "./types";
+import Router from "./router.ts";
+import type { BoundHandler, HttpMethod } from "./types.ts";
 
-export * from "./upload-stream";
+export * from "./upload-stream.ts";
 
 export enum Status {
   _100_Continue = 100,

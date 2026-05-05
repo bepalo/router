@@ -1,5 +1,5 @@
-import type { BoundHandler, HttpMethod } from "./types";
-export * from "./upload-stream";
+import type { BoundHandler, HttpMethod } from "./types.ts";
+export * from "./upload-stream.ts";
 export declare enum Status {
     _100_Continue = 100,
     _101_SwitchingProtocols = 101,

@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, vi } from "vitest";
-import { Router, text } from "@bepalo/router";
+const { Router, text } = typeof Deno !== "undefined" ? await import("@bepalo/router") : await import("@bepalo/router");;
 
 function mockRequest(method, url, opts = {}) {
   const headers = new Headers(opts.headers ?? {});

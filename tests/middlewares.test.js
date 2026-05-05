@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import {
+const {
   parseQuery,
   parseBody,
   cors,
@@ -8,7 +8,8 @@ import {
   parseAuthBasic,
   parseAuthAPIKey,
   parseAuthJWT,
-} from "@bepalo/router";
+  limitRate
+}  = typeof Deno !== "undefined" ? await import("@bepalo/router") : await import("@bepalo/router");;
 
 describe("Middlewares", () => {
   test("parseQuery should populate ctx.query from URLSearchParams", () => {
@@ -187,12 +188,11 @@ describe("Middlewares", () => {
   test("limitRate should throw when neither refillInterval nor refillRate provided", () => {
     expect(() =>
       // @ts-ignore - intentionally missing refill config
-      require("@bepalo/router").limitRate({ key: () => "id", maxTokens: 10 }),
+      limitRate({ key: () => "id", maxTokens: 10 }),
     ).toThrow();
   });
 
   test("limitRate with refillInterval should decrement tokens and return 429 when exhausted", () => {
-    const { limitRate } = require("@bepalo/router");
     const mw = limitRate({
       key: () => "client1",
       refillInterval: 1000000,

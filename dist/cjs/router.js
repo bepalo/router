@@ -28,7 +28,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
 var _Router_instances, _a, _Router_trees, _Router_enable, _Router_defaultHeaders, _Router_defaultCatcher, _Router_defaultFallback, _Router_normalizeTrailingSlash, _Router_setters, _Router_ALL_METHOD_PATHS, _Router_normalizePathname, _Router_splitUrl;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CRUD_METHODS = exports.ALL_METHODS = exports.Router = exports.isValidHttpMethod = void 0;
-const tree_1 = require("./tree");
+const tree_ts_1 = require("./tree.js");
 /**
  * Checks if a string is a valid HTTP method.
  * @param {string} method - The method string to validate
@@ -56,13 +56,13 @@ exports.isValidHttpMethod = isValidHttpMethod;
  */
 function initMethodTrees() {
     return {
-        HEAD: new tree_1.Tree(),
-        OPTIONS: new tree_1.Tree(),
-        GET: new tree_1.Tree(),
-        POST: new tree_1.Tree(),
-        PUT: new tree_1.Tree(),
-        PATCH: new tree_1.Tree(),
-        DELETE: new tree_1.Tree(),
+        HEAD: new tree_ts_1.Tree(),
+        OPTIONS: new tree_ts_1.Tree(),
+        GET: new tree_ts_1.Tree(),
+        POST: new tree_ts_1.Tree(),
+        PUT: new tree_ts_1.Tree(),
+        PATCH: new tree_ts_1.Tree(),
+        DELETE: new tree_ts_1.Tree(),
     };
 }
 /** @constant {Array} emptyArray - Empty array constant for optimization */

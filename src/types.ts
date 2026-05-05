@@ -1,4 +1,4 @@
-import Router, { RouterContext } from "./router";
+import Router, { RouterContext } from "./router.ts";
 
 /**
  * Standard HTTP methods supported by the router.

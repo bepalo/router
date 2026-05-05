@@ -5,7 +5,7 @@
  * @exports Router
  */
 
-import { Tree } from "./tree";
+import { Tree } from "./tree.ts";
 import type {
   HttpMethod,
   MethodPath,
@@ -16,7 +16,7 @@ import type {
   HeaderTuple,
   BoundHandler,
   CTXError,
-} from "./types";
+} from "./types.ts";
 
 /**
  * Checks if a string is a valid HTTP method.

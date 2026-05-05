@@ -1,7 +1,5 @@
-import Router, { RouterConfig, RouterContext } from "./router";
-import type { Handler, HttpMethod, Pipeline, CTXError } from "./types";
-export declare const isDeno: boolean;
-export declare const DenoProxy: any;
+import Router, { RouterConfig, RouterContext } from "./router.ts";
+import type { Handler, HttpMethod, Pipeline, CTXError } from "./types.ts";
 export type UCHandlerType = "FILTER" | "HOOK" | "HANDLER" | "FALLBACK" | "CATCHER" | "AFTER";
 export type RouterHandlers<CommonXContext = {}, MethodContexts extends Partial<Record<HttpMethod | "ALL" | "CRUD", Record<string, any>>> = {}> = {
     [K in HttpMethod | "ALL" | "CRUD" as K]?: {

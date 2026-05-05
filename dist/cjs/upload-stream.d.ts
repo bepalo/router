@@ -1,4 +1,4 @@
-import { FreeHandler } from "./types";
+import { FreeHandler } from "./types.ts";
 /**
  * Context object containing parsed upload data from multipart/form-data requests.
  * @typedef {Object} CTXUpload

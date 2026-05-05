@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authJWT = exports.parseAuthJWT = exports.authAPIKey = exports.parseAuthAPIKey = exports.authBasic = exports.parseAuthBasic = exports.basicAuth = exports.authorize = exports.authenticate = exports.cors = exports.limitRate = exports.parseBody = exports.parseCookie = exports.parseQuery = void 0;
-const helpers_1 = require("./helpers");
+const helpers_ts_1 = require("./helpers.js");
 const cache_1 = require("@bepalo/cache");
 const time_1 = require("@bepalo/time");
 /**
@@ -31,7 +31,7 @@ exports.parseQuery = parseQuery;
 const parseCookie = () => {
     return (req, ctx) => {
         var _a;
-        const cookie = (_a = (0, helpers_1.parseCookieFromRequest)(req)) !== null && _a !== void 0 ? _a : {};
+        const cookie = (_a = (0, helpers_ts_1.parseCookieFromRequest)(req)) !== null && _a !== void 0 ? _a : {};
         ctx.cookie = cookie;
     };
 };
@@ -70,7 +70,7 @@ const parseBody = (options) => {
         const contentType = (_a = _req.headers.get("content-type")) === null || _a === void 0 ? void 0 : _a.split(";", 2)[0];
         if (!(contentType && accept.includes(contentType))) {
             yield ((_b = _req.body) === null || _b === void 0 ? void 0 : _b.cancel().catch(() => { }));
-            return (0, helpers_1.status)(415);
+            return (0, helpers_ts_1.status)(415);
         }
         const req = clone ? _req.clone() : _req;
         try {
@@ -84,7 +84,7 @@ const parseBody = (options) => {
             }
             if (contentLength !== undefined && contentLength > maxSize) {
                 yield ((_c = _req.body) === null || _c === void 0 ? void 0 : _c.cancel().catch(() => { }));
-                return (0, helpers_1.status)(413);
+                return (0, helpers_ts_1.status)(413);
             }
             switch (contentType) {
                 case "application/x-www-form-urlencoded": {
@@ -123,7 +123,7 @@ const parseBody = (options) => {
         }
         catch (error) {
             yield ((_d = _req.body) === null || _d === void 0 ? void 0 : _d.cancel().catch(() => { }));
-            return (0, helpers_1.status)(400, "Malformed Payload");
+            return (0, helpers_ts_1.status)(400, "Malformed Payload");
         }
     });
 };
@@ -197,7 +197,7 @@ const limitRate = (config) => {
             }
             if (entry.tokens <= 0) {
                 ctx.headers.set("Retry-After", Math.ceil((refillInterval - timeElapsed) / refillTimeSecondsDenominator).toFixed());
-                return (0, helpers_1.status)(429);
+                return (0, helpers_ts_1.status)(429);
             }
             else {
                 entry.tokens--;
@@ -222,7 +222,7 @@ const limitRate = (config) => {
             entry.lastRefill = now();
             if (entry.tokens <= 0) {
                 ctx.headers.set("Retry-After", Math.ceil(1 / refillRate).toFixed());
-                return (0, helpers_1.status)(429);
+                return (0, helpers_ts_1.status)(429);
             }
             else {
                 entry.tokens--;
@@ -316,7 +316,7 @@ const cors = (config) => {
             if (maxAge) {
                 ctx.headers.set("Access-Control-Max-Age", maxAge.toString());
             }
-            return (0, helpers_1.status)(204, null);
+            return (0, helpers_ts_1.status)(204, null);
         }
         if (endHere)
             return true;
@@ -344,10 +344,10 @@ const authenticate = ({ parseAuth, endHere = false, checkOnly = false, }) => {
             if (auth instanceof Promise)
                 auth = yield auth;
             if (!auth) {
-                return checkOnly ? false : (0, helpers_1.status)(401);
+                return checkOnly ? false : (0, helpers_ts_1.status)(401);
             }
             else if (auth instanceof Error) {
-                return checkOnly ? false : (0, helpers_1.status)(401, (_a = auth.message) !== null && _a !== void 0 ? _a : undefined);
+                return checkOnly ? false : (0, helpers_ts_1.status)(401, (_a = auth.message) !== null && _a !== void 0 ? _a : undefined);
             }
             ctx.auth = auth;
             if (endHere)
@@ -379,18 +379,18 @@ const authorize = ({ allowRole, forbidRole, forPermissions, hasPermission, endHe
     }
     return (req, { auth }) => {
         if (!auth) {
-            return (0, helpers_1.status)(401);
+            return (0, helpers_ts_1.status)(401);
         }
         if (allowRole && !allowRole(auth.role)) {
-            return (0, helpers_1.status)(403);
+            return (0, helpers_ts_1.status)(403);
         }
         if (forbidRole && forbidRole(auth.role)) {
-            return (0, helpers_1.status)(403);
+            return (0, helpers_ts_1.status)(403);
         }
         if (forPermissions && hasPermission) {
             const permitted = forPermissions.some((permission) => hasPermission(permission, auth.role));
             if (!permitted)
-                return (0, helpers_1.status)(403);
+                return (0, helpers_ts_1.status)(403);
         }
         if (endHere)
             return true;
@@ -470,25 +470,25 @@ const parseAuthBasic = ({ credentials, type = "raw", separator = ":", realm = "P
         const authorization = req.headers.get("authorization");
         ctx.headers.set("WWW-Authenticate", `Basic realm="${realm}", charset="UTF-8"`);
         if (!authorization)
-            return (0, helpers_1.status)(401);
+            return (0, helpers_ts_1.status)(401);
         const [scheme, creds] = authorization.split(" ", 2);
         if (scheme.toLowerCase() !== "basic" || !creds)
-            return (0, helpers_1.status)(401);
+            return (0, helpers_ts_1.status)(401);
         let xcreds = creds;
         if (type === "base64") {
             try {
                 xcreds = atob(creds);
             }
             catch (_a) {
-                return (0, helpers_1.status)(401);
+                return (0, helpers_ts_1.status)(401);
             }
         }
         const [username, password] = xcreds.split(separator, 2);
         if (!username || !password)
-            return (0, helpers_1.status)(401);
+            return (0, helpers_ts_1.status)(401);
         const user = credentials.get(username);
         if (!user || password !== user.password)
-            return (0, helpers_1.status)(401);
+            return (0, helpers_ts_1.status)(401);
         ctx[ctxProp] = {
             username,
             role: user.role,
@@ -538,7 +538,7 @@ const parseAuthAPIKey = ({ verify, ctxProp = "apiKeyAuth", endHere = false, }) =
     return (req, ctx) => {
         const apiKey = req.headers.get("X-API-Key");
         if (!apiKey || !verify(apiKey))
-            return (0, helpers_1.status)(401);
+            return (0, helpers_ts_1.status)(401);
         ctx[ctxProp] = {
             apiKey,
         };
@@ -604,15 +604,15 @@ const parseAuthJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", endHe
         var _a;
         const authorization = req.headers.get("authorization");
         if (!authorization)
-            return (0, helpers_1.status)(401);
+            return (0, helpers_ts_1.status)(401);
         const [scheme, token] = authorization.split(" ", 2);
         if (scheme.toLowerCase() !== "bearer" || !token)
-            return (0, helpers_1.status)(401);
+            return (0, helpers_ts_1.status)(401);
         const result = jwt.verifySync(token, verifyOptions);
         if (!result.payload)
-            return (0, helpers_1.status)(401, (_a = result.error) === null || _a === void 0 ? void 0 : _a.message);
+            return (0, helpers_ts_1.status)(401, (_a = result.error) === null || _a === void 0 ? void 0 : _a.message);
         if (validate && !validate(result.payload))
-            return (0, helpers_1.status)(401);
+            return (0, helpers_ts_1.status)(401);
         ctx[ctxProp] = {
             jwt,
             token,

@@ -2,7 +2,7 @@
 
 | 🕙 Start time | ⌛ Duration |
 | --- | ---: |
-| 4/4/2026, 12:08:32 PM | 0.816 s |
+| 5/5/2026, 11:15:23 AM | 0.793 s |
 
 | | ✅ Passed | ❌ Failed | ⏩ Skipped | 🚧 Todo | ⚪ Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -11,7 +11,7 @@
 
 ## ✅ <a id="file0" href="#file0">tests/helpers.test.js</a>
 
-58 passed, 0 failed, 0 skipped, 0 todo, done in 67.49869400000011 s
+58 passed, 0 failed, 0 skipped, 0 todo, done in 60.71479599999998 s
 
 ```
 ✅ Response Helpers › status / redirect
@@ -93,7 +93,7 @@
 
 ## ✅ <a id="file1" href="#file1">tests/middlewares.test.js</a>
 
-20 passed, 0 failed, 0 skipped, 0 todo, done in 37.34939499999996 s
+20 passed, 0 failed, 0 skipped, 0 todo, done in 28.546448000000055 s
 
 ```
 ✅ Middlewares
@@ -121,7 +121,7 @@
 
 ## ✅ <a id="file2" href="#file2">tests/route.override.test.js</a>
 
-15 passed, 0 failed, 0 skipped, 0 todo, done in 30.16455699999983 s
+15 passed, 0 failed, 0 skipped, 0 todo, done in 29.611128000000008 s
 
 ```
 ✅ Route Override Tests
@@ -144,7 +144,7 @@
 
 ## ✅ <a id="file3" href="#file3">tests/router.test.js</a>
 
-45 passed, 0 failed, 0 skipped, 0 todo, done in 62.09582799999998 s
+45 passed, 0 failed, 0 skipped, 0 todo, done in 64.4664499999999 s
 
 ```
 ✅ Router › Basics
@@ -182,8 +182,8 @@
    ✅ append mounts another router under prefix and discards config
 ✅ Router › Auth & Parsing Integrations
    ✅ basic auth filter blocks and allows correctly
-   ✅ authAPIKey allows valid key and blocks invalid
-   ✅ authJWT populates ctx when token valid
+   ✅ parseAuthAPIKey allows valid key and blocks invalid
+   ✅ parseAuthJWT populates ctx when token valid
 ✅ Router › Advanced & Misc
    ✅ handler pipeline: later handler sees ctx changes
    ✅ returns 204 when handler returns void/true/false treated as no content

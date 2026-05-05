@@ -1,5 +1,5 @@
-import type { RouterContext } from "./router";
-import type { FreeHandler, HttpMethod, CTXAddress } from "./types";
+import type { RouterContext } from "./router.ts";
+import type { FreeHandler, HttpMethod, CTXAddress } from "./types.ts";
 import { CacheConfig } from "@bepalo/cache";
 import { JWT, JwtPayload, JwtVerifyOptions } from "@bepalo/jwt";
 /**

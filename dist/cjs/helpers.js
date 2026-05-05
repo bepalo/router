@@ -25,7 +25,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.respondWithCatcher = exports.respondWith = exports.parseCookieFromRequest = exports.clearCookie = exports.setCookie = exports.send = exports.usp = exports.formData = exports.octetStream = exports.blob = exports.json = exports.html = exports.text = exports.forward = exports.redirect = exports.status = exports.Status = void 0;
 exports.getHttpStatusText = getHttpStatusText;
-__exportStar(require("./upload-stream"), exports);
+__exportStar(require("./upload-stream.js"), exports);
 var Status;
 (function (Status) {
     Status[Status["_100_Continue"] = 100] = "_100_Continue";

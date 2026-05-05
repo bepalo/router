@@ -2,7 +2,7 @@ import Router, {
   isValidHttpMethod,
   RouterConfig,
   RouterContext,
-} from "./router";
+} from "./router.ts";
 import type {
   Handler,
   HandlerType,
@@ -10,10 +10,8 @@ import type {
   MethodPath,
   Pipeline,
   CTXError,
-} from "./types";
+} from "./types.ts";
 
-export const isDeno = "Deno" in globalThis;
-export const DenoProxy = isDeno ? (globalThis as any).Deno : {};
 const defaultValidExtensions = [".ts", ".js", ".tsx", ".jsx"];
 const defaultNodeFilter = (node: DirWalkNode) =>
   defaultValidExtensions.some((ext) => node.name.endsWith(ext));
