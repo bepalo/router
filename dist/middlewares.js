@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,34 +7,30 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.authJWT = exports.parseAuthJWT = exports.authAPIKey = exports.parseAuthAPIKey = exports.authBasic = exports.parseAuthBasic = exports.basicAuth = exports.authorize = exports.authenticate = exports.cors = exports.limitRate = exports.parseBody = exports.parseCookie = exports.parseQuery = void 0;
-const helpers_ts_1 = require("./helpers.js");
-const cache_1 = require("@bepalo/cache");
-const time_1 = require("@bepalo/time");
+import { parseCookieFromRequest, status } from "./helpers.js";
+import { Cache } from "@bepalo/cache";
+import { Time } from "@bepalo/time";
 /**
  * Creates middleware that parses queries from the request url and adds them to the context.
  * @returns {Function} A middleware function that adds parsed queries to context.query
  */
-const parseQuery = () => {
+export const parseQuery = () => {
     return (req, ctx) => {
         const query = Object.fromEntries(ctx.url.searchParams.entries());
         ctx.query = query;
     };
 };
-exports.parseQuery = parseQuery;
 /**
  * Creates middleware that parses cookies from the request and adds them to the context.
  * @returns {Function} A middleware function that adds parsed cookies to context.cookie
  */
-const parseCookie = () => {
+export const parseCookie = () => {
     return (req, ctx) => {
         var _a;
-        const cookie = (_a = (0, helpers_ts_1.parseCookieFromRequest)(req)) !== null && _a !== void 0 ? _a : {};
+        const cookie = (_a = parseCookieFromRequest(req)) !== null && _a !== void 0 ? _a : {};
         ctx.cookie = cookie;
     };
 };
-exports.parseCookie = parseCookie;
 /**
  * Creates middleware that parses the request body based on Content-Type.
  * Supports url-encoded forms, JSON, and plain text.
@@ -49,7 +44,7 @@ exports.parseCookie = parseCookie;
  * @throws {Response} Returns a 413 response if body exceeds maxSize
  * @throws {Response} Returns a 400 response if body is malformed
  */
-const parseBody = (options) => {
+export const parseBody = (options) => {
     var _a;
     const accept = (options === null || options === void 0 ? void 0 : options.accept)
         ? Array.isArray(options.accept)
@@ -70,7 +65,7 @@ const parseBody = (options) => {
         const contentType = (_a = _req.headers.get("content-type")) === null || _a === void 0 ? void 0 : _a.split(";", 2)[0];
         if (!(contentType && accept.includes(contentType))) {
             yield ((_b = _req.body) === null || _b === void 0 ? void 0 : _b.cancel().catch(() => { }));
-            return (0, helpers_ts_1.status)(415);
+            return status(415);
         }
         const req = clone ? _req.clone() : _req;
         try {
@@ -84,7 +79,7 @@ const parseBody = (options) => {
             }
             if (contentLength !== undefined && contentLength > maxSize) {
                 yield ((_c = _req.body) === null || _c === void 0 ? void 0 : _c.cancel().catch(() => { }));
-                return (0, helpers_ts_1.status)(413);
+                return status(413);
             }
             switch (contentType) {
                 case "application/x-www-form-urlencoded": {
@@ -123,11 +118,10 @@ const parseBody = (options) => {
         }
         catch (error) {
             yield ((_d = _req.body) === null || _d === void 0 ? void 0 : _d.cancel().catch(() => { }));
-            return (0, helpers_ts_1.status)(400, "Malformed Payload");
+            return status(400, "Malformed Payload");
         }
     });
 };
-exports.parseBody = parseBody;
 /**
  * Creates a rate limiting middleware using token bucket algorithm.
  * Supports both fixed interval refill and continuous rate-based refill.
@@ -165,18 +159,18 @@ exports.parseBody = parseBody;
  *
  * @throws {Error} If neither refillInterval nor refillRate is provided
  */
-const limitRate = (config) => {
+export const limitRate = (config) => {
     const { key, refillInterval, refillRate, maxTokens, refillTimeSecondsDenominator = 1000, now = () => Date.now(), cacheConfig = {
         now: () => Date.now(),
         // defaultMaxAgse: Time.for(10).seconds._ms,
-        defaultMaxAge: time_1.Time.for(1).hour._ms,
-        cleanupInterval: time_1.Time.every(10).minutes._ms,
+        defaultMaxAge: Time.for(1).hour._ms,
+        cleanupInterval: Time.every(10).minutes._ms,
         onGetMiss: (cache, key, reason) => {
             cache.set(key, { tokens: maxTokens, lastRefill: now() });
             return true;
         },
     }, setXRateLimitHeaders = false, endHere = false, } = config;
-    const rateLimits = new cache_1.Cache(cacheConfig);
+    const rateLimits = new Cache(cacheConfig);
     if (refillInterval) {
         return function (req, ctx) {
             var _a;
@@ -197,7 +191,7 @@ const limitRate = (config) => {
             }
             if (entry.tokens <= 0) {
                 ctx.headers.set("Retry-After", Math.ceil((refillInterval - timeElapsed) / refillTimeSecondsDenominator).toFixed());
-                return (0, helpers_ts_1.status)(429);
+                return status(429);
             }
             else {
                 entry.tokens--;
@@ -222,7 +216,7 @@ const limitRate = (config) => {
             entry.lastRefill = now();
             if (entry.tokens <= 0) {
                 ctx.headers.set("Retry-After", Math.ceil(1 / refillRate).toFixed());
-                return (0, helpers_ts_1.status)(429);
+                return status(429);
             }
             else {
                 entry.tokens--;
@@ -237,7 +231,6 @@ const limitRate = (config) => {
     }
     throw new Error("LIMIT-RATE: `refillInterval` or `refillRate` or both should be set");
 };
-exports.limitRate = limitRate;
 /**
  * Creates a CORS (Cross-Origin Resource Sharing) middleware.
  * Supports preflight requests and configurable CORS headers.
@@ -269,7 +262,7 @@ exports.limitRate = limitRate;
  *
  * @throws {Error} If credentials is true with wildcard origin ("*")
  */
-const cors = (config) => {
+export const cors = (config) => {
     const { origins = "*", methods = ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"], allowedHeaders = ["Content-Type", "Authorization"], exposedHeaders, credentials = false, maxAge = 86400, varyOrigin = false, endHere = false, } = config !== null && config !== void 0 ? config : {};
     const globOrigin = origins === "*" ? "*" : null;
     const originsSet = new Set(typeof origins !== "string" ? origins : origins !== "*" ? [] : [origins]);
@@ -316,13 +309,12 @@ const cors = (config) => {
             if (maxAge) {
                 ctx.headers.set("Access-Control-Max-Age", maxAge.toString());
             }
-            return (0, helpers_ts_1.status)(204, null);
+            return status(204, null);
         }
         if (endHere)
             return true;
     };
 };
-exports.cors = cors;
 /**
  * Middleware to authenticate a request.
  *
@@ -336,7 +328,7 @@ exports.cors = cors;
  * @returns {FreeHandler<Partial<CTXAuth>&XContext>} A handler that sets `ctx.auth` if authentication succeeds,
  *   otherwise returns a `401 Unauthorized` or with error message if available response (unless `checkOnly` is true).
  */
-const authenticate = ({ parseAuth, endHere = false, checkOnly = false, }) => {
+export const authenticate = ({ parseAuth, endHere = false, checkOnly = false, }) => {
     return function (req, ctx) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
@@ -344,10 +336,10 @@ const authenticate = ({ parseAuth, endHere = false, checkOnly = false, }) => {
             if (auth instanceof Promise)
                 auth = yield auth;
             if (!auth) {
-                return checkOnly ? false : (0, helpers_ts_1.status)(401);
+                return checkOnly ? false : status(401);
             }
             else if (auth instanceof Error) {
-                return checkOnly ? false : (0, helpers_ts_1.status)(401, (_a = auth.message) !== null && _a !== void 0 ? _a : undefined);
+                return checkOnly ? false : status(401, (_a = auth.message) !== null && _a !== void 0 ? _a : undefined);
             }
             ctx.auth = auth;
             if (endHere)
@@ -355,7 +347,6 @@ const authenticate = ({ parseAuth, endHere = false, checkOnly = false, }) => {
         });
     };
 };
-exports.authenticate = authenticate;
 /**
  * Middleware to authorize a request based on role or permissions.
  *
@@ -373,30 +364,29 @@ exports.authenticate = authenticate;
  *   Throws an error if `forPermissions` is set without `hasPermission`.
  *
  */
-const authorize = ({ allowRole, forbidRole, forPermissions, hasPermission, endHere = false, }) => {
+export const authorize = ({ allowRole, forbidRole, forPermissions, hasPermission, endHere = false, }) => {
     if (forPermissions && !hasPermission) {
         throw new Error("authorize middleware 'forPermissions' require 'hasPermission'");
     }
     return (req, { auth }) => {
         if (!auth) {
-            return (0, helpers_ts_1.status)(401);
+            return status(401);
         }
         if (allowRole && !allowRole(auth.role)) {
-            return (0, helpers_ts_1.status)(403);
+            return status(403);
         }
         if (forbidRole && forbidRole(auth.role)) {
-            return (0, helpers_ts_1.status)(403);
+            return status(403);
         }
         if (forPermissions && hasPermission) {
             const permitted = forPermissions.some((permission) => hasPermission(permission, auth.role));
             if (!permitted)
-                return (0, helpers_ts_1.status)(403);
+                return status(403);
         }
         if (endHere)
             return true;
     };
 };
-exports.authorize = authorize;
 /**
  *
  * @template XContext - Additional context type to merge with CTXAuth.
@@ -407,7 +397,7 @@ exports.authorize = authorize;
  * @param {string} [options.realm="Protected"] - The realm of the basic authentication
  * @returns
  */
-const basicAuth = ({ credentials, type = "base64", separator = ":", realm = "Protected", }) => {
+export const basicAuth = ({ credentials, type = "base64", separator = ":", realm = "Protected", }) => {
     return (req, ctx) => {
         const authorization = req.headers.get("authorization");
         ctx.headers.set("WWW-Authenticate", `Basic realm="${realm}", charset="UTF-8"`);
@@ -438,7 +428,6 @@ const basicAuth = ({ credentials, type = "base64", separator = ":", realm = "Pro
         return auth;
     };
 };
-exports.basicAuth = basicAuth;
 /**
  * Creates a Basic Authentication middleware.
  * Supports RFC 7617 Basic Authentication scheme.
@@ -465,30 +454,30 @@ exports.basicAuth = basicAuth;
  *   ctxProp: "user" // Store in ctx.user instead of ctx.basicAuth
  * });
  */
-const parseAuthBasic = ({ credentials, type = "raw", separator = ":", realm = "Protected", ctxProp = "basicAuth", endHere = false, }) => {
+export const parseAuthBasic = ({ credentials, type = "raw", separator = ":", realm = "Protected", ctxProp = "basicAuth", endHere = false, }) => {
     return (req, ctx) => {
         const authorization = req.headers.get("authorization");
         ctx.headers.set("WWW-Authenticate", `Basic realm="${realm}", charset="UTF-8"`);
         if (!authorization)
-            return (0, helpers_ts_1.status)(401);
+            return status(401);
         const [scheme, creds] = authorization.split(" ", 2);
         if (scheme.toLowerCase() !== "basic" || !creds)
-            return (0, helpers_ts_1.status)(401);
+            return status(401);
         let xcreds = creds;
         if (type === "base64") {
             try {
                 xcreds = atob(creds);
             }
             catch (_a) {
-                return (0, helpers_ts_1.status)(401);
+                return status(401);
             }
         }
         const [username, password] = xcreds.split(separator, 2);
         if (!username || !password)
-            return (0, helpers_ts_1.status)(401);
+            return status(401);
         const user = credentials.get(username);
         if (!user || password !== user.password)
-            return (0, helpers_ts_1.status)(401);
+            return status(401);
         ctx[ctxProp] = {
             username,
             role: user.role,
@@ -497,11 +486,10 @@ const parseAuthBasic = ({ credentials, type = "raw", separator = ":", realm = "P
             return true;
     };
 };
-exports.parseAuthBasic = parseAuthBasic;
 /**
  * @deprecated use `parseAuthBasic`
  */
-exports.authBasic = exports.parseAuthBasic;
+export const authBasic = parseAuthBasic;
 /**
  * Creates an API Key Authentication middleware.
  * Validates API keys from X-API-Key header.
@@ -534,11 +522,11 @@ exports.authBasic = exports.parseAuthBasic;
  *   }
  * });
  */
-const parseAuthAPIKey = ({ verify, ctxProp = "apiKeyAuth", endHere = false, }) => {
+export const parseAuthAPIKey = ({ verify, ctxProp = "apiKeyAuth", endHere = false, }) => {
     return (req, ctx) => {
         const apiKey = req.headers.get("X-API-Key");
         if (!apiKey || !verify(apiKey))
-            return (0, helpers_ts_1.status)(401);
+            return status(401);
         ctx[ctxProp] = {
             apiKey,
         };
@@ -546,11 +534,10 @@ const parseAuthAPIKey = ({ verify, ctxProp = "apiKeyAuth", endHere = false, }) =
             return true;
     };
 };
-exports.parseAuthAPIKey = parseAuthAPIKey;
 /**
  * @deprecated use `parseAuthAPIKey`
  */
-exports.authAPIKey = exports.parseAuthAPIKey;
+export const authAPIKey = parseAuthAPIKey;
 /**
  * Creates a JWT (JSON Web Token) Authentication middleware.
  * Validates Bearer tokens from Authorization header.
@@ -599,20 +586,20 @@ exports.authAPIKey = exports.parseAuthAPIKey;
  *   }
  * });
  */
-const parseAuthJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", endHere = false, }) => {
+export const parseAuthJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", endHere = false, }) => {
     return (req, ctx) => {
         var _a;
         const authorization = req.headers.get("authorization");
         if (!authorization)
-            return (0, helpers_ts_1.status)(401);
+            return status(401);
         const [scheme, token] = authorization.split(" ", 2);
         if (scheme.toLowerCase() !== "bearer" || !token)
-            return (0, helpers_ts_1.status)(401);
+            return status(401);
         const result = jwt.verifySync(token, verifyOptions);
         if (!result.payload)
-            return (0, helpers_ts_1.status)(401, (_a = result.error) === null || _a === void 0 ? void 0 : _a.message);
+            return status(401, (_a = result.error) === null || _a === void 0 ? void 0 : _a.message);
         if (validate && !validate(result.payload))
-            return (0, helpers_ts_1.status)(401);
+            return status(401);
         ctx[ctxProp] = {
             jwt,
             token,
@@ -622,9 +609,8 @@ const parseAuthJWT = ({ jwt, validate, verifyOptions, ctxProp = "jwtAuth", endHe
             return true;
     };
 };
-exports.parseAuthJWT = parseAuthJWT;
 /**
  * @deprecated use `parseAuthJWT`
  */
-exports.authJWT = exports.parseAuthJWT;
+export const authJWT = parseAuthJWT;
 //# sourceMappingURL=middlewares.js.map

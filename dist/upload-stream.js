@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,9 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseUploadStreaming = void 0;
-const helpers_ts_1 = require("./helpers.js");
+import { status } from "./helpers.js";
 /**
  * Creates a middleware function for streaming multipart/form-data upload parsing.
  * This function processes uploads in chunks as they arrive, allowing for handling
@@ -46,7 +43,7 @@ const helpers_ts_1 = require("./helpers.js");
  *   });
  * });
  */
-const parseUploadStreaming = (options) => {
+export const parseUploadStreaming = (options) => {
     const { maxTotalSize = 100 * 1024 * 1024, // 100MB default
     maxFileSize = 20 * 1024 * 1024, // 20MB per file
     maxFiles = 50, maxFields = 1000, allowedTypes, uploadIdGenerator = () => `upload_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, onUploadStart, onUploadComplete, onFileStart, onFileChunk, onFileComplete, onFileError, onField, onError, } = options || {};
@@ -55,12 +52,12 @@ const parseUploadStreaming = (options) => {
         const contentType = req.headers.get("content-type");
         // Check if it's multipart/form-data
         if (!(contentType === null || contentType === void 0 ? void 0 : contentType.startsWith("multipart/form-data"))) {
-            return (0, helpers_ts_1.status)(415, "Expected multipart/form-data");
+            return status(415, "Expected multipart/form-data");
         }
         // Get boundary from content-type
         const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
         if (!boundaryMatch) {
-            return (0, helpers_ts_1.status)(400, "Missing boundary in Content-Type");
+            return status(400, "Missing boundary in Content-Type");
         }
         const boundary = boundaryMatch[1] || boundaryMatch[2];
         // Generate upload ID
@@ -330,19 +327,18 @@ const parseUploadStreaming = (options) => {
             }
             console.error("Upload parsing error:", error);
             if (error.message.includes("exceeds maximum")) {
-                return (0, helpers_ts_1.status)(413, error.message);
+                return status(413, error.message);
             }
             if (error.message.includes("not allowed")) {
-                return (0, helpers_ts_1.status)(415, error.message);
+                return status(415, error.message);
             }
             if (error.message.includes("exceeded")) {
-                return (0, helpers_ts_1.status)(400, error.message);
+                return status(400, error.message);
             }
-            return (0, helpers_ts_1.status)(400, "Failed to parse upload");
+            return status(400, "Failed to parse upload");
         }
     });
 };
-exports.parseUploadStreaming = parseUploadStreaming;
 /**
  * Helper function to find a byte sequence within a buffer.
  * Performs a linear search for the sequence in the buffer.

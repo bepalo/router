@@ -1,9 +1,10 @@
 {
   "name": "@bepalo/router",
-  "version": "1.12.34",
+  "version": "1.12.35",
   "description": "A fast and feature-rich router for JavaScript runtimes.",
   "author": "Natnael Eshetu",
   "license": "MIT",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/bepalo/router.git"
