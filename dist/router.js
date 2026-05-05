@@ -1,3 +1,4 @@
+"use strict";
 /**
  * @file A fast radix-trie based router for JavaScript runtimes.
  * @module @bepalo/router
@@ -25,13 +26,15 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
 var _Router_instances, _a, _Router_trees, _Router_enable, _Router_defaultHeaders, _Router_defaultCatcher, _Router_defaultFallback, _Router_normalizeTrailingSlash, _Router_setters, _Router_ALL_METHOD_PATHS, _Router_normalizePathname, _Router_splitUrl;
-import { Tree } from "./tree.js";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CRUD_METHODS = exports.ALL_METHODS = exports.Router = exports.isValidHttpMethod = void 0;
+const tree_ts_1 = require("./tree.js");
 /**
  * Checks if a string is a valid HTTP method.
  * @param {string} method - The method string to validate
  * @returns {boolean} True if the method is valid, false otherwise
  */
-export const isValidHttpMethod = (method) => {
+const isValidHttpMethod = (method) => {
     switch (method) {
         case "HEAD":
         case "OPTIONS":
@@ -45,6 +48,7 @@ export const isValidHttpMethod = (method) => {
             return false;
     }
 };
+exports.isValidHttpMethod = isValidHttpMethod;
 /**
  * Initializes method trees for all HTTP methods.
  * @returns {Record<HttpMethod, Tree<RouteNode<Context>>>} Trees for each HTTP method
@@ -52,13 +56,13 @@ export const isValidHttpMethod = (method) => {
  */
 function initMethodTrees() {
     return {
-        HEAD: new Tree(),
-        OPTIONS: new Tree(),
-        GET: new Tree(),
-        POST: new Tree(),
-        PUT: new Tree(),
-        PATCH: new Tree(),
-        DELETE: new Tree(),
+        HEAD: new tree_ts_1.Tree(),
+        OPTIONS: new tree_ts_1.Tree(),
+        GET: new tree_ts_1.Tree(),
+        POST: new tree_ts_1.Tree(),
+        PUT: new tree_ts_1.Tree(),
+        PATCH: new tree_ts_1.Tree(),
+        DELETE: new tree_ts_1.Tree(),
     };
 }
 /** @constant {Array} emptyArray - Empty array constant for optimization */
@@ -93,7 +97,7 @@ const emptyArray = [];
  * const response = await router.respond(new Request("http://localhost/"));
  *
  */
-export class Router {
+class Router {
     /**
      * Gets the routing trees for all handler types.
      * @returns {Record<HandlerType, Record<HttpMethod, Tree<RouteNode<Context>>>>}
@@ -407,7 +411,7 @@ export class Router {
         return __awaiter(this, void 0, void 0, function* () {
             var _b, _c, _d, _e;
             const method = req.method;
-            if (!isValidHttpMethod(method)) {
+            if (!(0, exports.isValidHttpMethod)(method)) {
                 return new Response("Method Not Allowed", {
                     status: 405,
                     statusText: "Method Not Allowed",
@@ -617,6 +621,7 @@ export class Router {
         });
     }
 }
+exports.Router = Router;
 _a = Router, _Router_trees = new WeakMap(), _Router_enable = new WeakMap(), _Router_defaultHeaders = new WeakMap(), _Router_defaultCatcher = new WeakMap(), _Router_defaultFallback = new WeakMap(), _Router_normalizeTrailingSlash = new WeakMap(), _Router_setters = new WeakMap(), _Router_instances = new WeakSet(), _Router_normalizePathname = function _Router_normalizePathname(pathname) {
     return pathname === "/"
         ? [""]
@@ -631,9 +636,9 @@ _a = Router, _Router_trees = new WeakMap(), _Router_enable = new WeakMap(), _Rou
             .split(" ", 2)
             .map((mu) => mu.trim());
         const methods = _method === "ALL"
-            ? ALL_METHODS
+            ? exports.ALL_METHODS
             : _method === "CRUD"
-                ? CRUD_METHODS
+                ? exports.CRUD_METHODS
                 : [_method];
         const pathNodes = __classPrivateFieldGet(this, _Router_instances, "m", _Router_normalizePathname).call(this, pathname);
         for (const method of methods) {
@@ -702,7 +707,7 @@ _Router_ALL_METHOD_PATHS = { value: [
         "PATCH /.**",
         "DELETE /.**",
     ] };
-export const ALL_METHODS = [
+exports.ALL_METHODS = [
     "HEAD",
     "OPTIONS",
     "GET",
@@ -711,12 +716,12 @@ export const ALL_METHODS = [
     "PATCH",
     "DELETE",
 ];
-export const CRUD_METHODS = [
+exports.CRUD_METHODS = [
     "GET",
     "POST",
     "PUT",
     "PATCH",
     "DELETE",
 ];
-export default Router;
+exports.default = Router;
 //# sourceMappingURL=router.js.map

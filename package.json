@@ -1,10 +1,9 @@
 {
   "name": "@bepalo/router",
-  "version": "1.12.35",
+  "version": "1.12.36",
   "description": "A fast and feature-rich router for JavaScript runtimes.",
   "author": "Natnael Eshetu",
   "license": "MIT",
-  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/bepalo/router.git"
@@ -12,6 +11,7 @@
   "homepage": "https://github.com/bepalo/router#readme",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/cjs/index.js"
     },

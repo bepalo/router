@@ -1,3 +1,37 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -55,7 +89,10 @@ var __asyncGenerator = (this && this.__asyncGenerator) || function (thisArg, _ar
     function settle(f, v) { if (f(v), q.shift(), q.length) resume(q[0][0], q[0][1]); }
 };
 var _RouterFramework_rootPath, _RouterFramework_filterNode, _RouterFramework_processNode, _RouterFramework_onDir, _RouterFramework_loading, _RouterFramework_loaded;
-import Router, { isValidHttpMethod, } from "./router.js";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.RouterFramework = void 0;
+exports.walk = walk;
+const router_ts_1 = __importStar(require("./router.js"));
 const defaultValidExtensions = [".ts", ".js", ".tsx", ".jsx"];
 const defaultNodeFilter = (node) => defaultValidExtensions.some((ext) => node.name.endsWith(ext));
 const defaultNodeProcessor = (node) => {
@@ -63,7 +100,7 @@ const defaultNodeProcessor = (node) => {
     if (extensionIndex !== -1)
         node.name = node.name.slice(0, extensionIndex);
 };
-export class RouterFramework extends Router {
+class RouterFramework extends router_ts_1.default {
     get loading() {
         return __classPrivateFieldGet(this, _RouterFramework_loading, "f");
     }
@@ -141,7 +178,7 @@ export class RouterFramework extends Router {
                         for (const [method, methodHandlers] of Object.entries(handlers)) {
                             for (const [uchandlerType, pipeline] of Object.entries(methodHandlers)) {
                                 const handlerType = uchandlerType.toLowerCase();
-                                if (isValidHttpMethod(method) ||
+                                if ((0, router_ts_1.isValidHttpMethod)(method) ||
                                     method === "ALL" ||
                                     method === "CRUD") {
                                     this.setRoutes(handlerType, `${method} ${path}`, pipeline);
@@ -170,8 +207,9 @@ export class RouterFramework extends Router {
         });
     }
 }
+exports.RouterFramework = RouterFramework;
 _RouterFramework_rootPath = new WeakMap(), _RouterFramework_filterNode = new WeakMap(), _RouterFramework_processNode = new WeakMap(), _RouterFramework_onDir = new WeakMap(), _RouterFramework_loading = new WeakMap(), _RouterFramework_loaded = new WeakMap();
-export function walk(dir, rootPath) {
+function walk(dir, rootPath) {
     return __asyncGenerator(this, arguments, function* walk_1() {
         rootPath = rootPath || dir;
         const fs = yield __await(import("fs"));
