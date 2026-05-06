@@ -55,12 +55,16 @@ export const parseCookie = <XContext = {}>(): FreeHandler<
 
 /**
  * Parsed body object types.
- * @typedef {Object} ParsedBody
+ * @typedef {Object|Array<unknown>|string|null|undefined} ParsedBody
  */
 export type ParsedBody =
-  | { value: string | number | boolean | null }
-  | { values: unknown[] }
-  | Record<string, unknown>;
+  | Record<string, unknown>
+  | Array<unknown>
+  | string
+  | number
+  | boolean
+  | null
+  | undefined;
 
 /**
  * Context object containing parsed request body.
@@ -125,7 +129,7 @@ export const parseBody = <XContext = {}>(options?: {
         ? parseInt(contentLengthHeader)
         : undefined;
       if (contentLength === 0) {
-        ctx.body = {};
+        ctx.body = undefined;
         return;
       }
       if (contentLength !== undefined && contentLength > maxSize) {
@@ -138,31 +142,17 @@ export const parseBody = <XContext = {}>(options?: {
           ctx.body = Object.fromEntries(body.entries());
           break;
         }
-        case "application/json": {
-          const body = await req.json();
-          if (Array.isArray(body)) {
-            ctx.body = { values: body };
-          } else if (body === undefined) {
-            ctx.body = {};
-          } else if (body === null) {
-            ctx.body = { value: null };
-          } else if (typeof body === "object") {
-            ctx.body = body;
-          } else {
-            ctx.body = { value: body };
-          }
+        case "application/json":
+          ctx.body = await req.json();
           break;
-        }
-        case "text/plain": {
-          const text = await req.text();
-          ctx.body = { text };
+        case "text/plain":
+          ctx.body = await req.text();
           break;
-        }
         default:
-          ctx.body = {};
+          ctx.body = undefined;
           break;
       }
-    } catch (error) {
+    } catch {
       await _req.body?.cancel().catch(() => {});
       return status(400, "Malformed Payload");
     }
