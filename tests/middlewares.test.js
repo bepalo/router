@@ -34,7 +34,7 @@ describe("Middlewares", () => {
 
     await mw(req, ctx);
 
-    expect(ctx.body).toEqual({ values: [1, 2, 3] });
+    expect(ctx.body).toEqual([1, 2, 3]);
   });
 
   test("parseBody should parse text/plain into { text }", async () => {
@@ -48,7 +48,7 @@ describe("Middlewares", () => {
 
     await mw(req, ctx);
 
-    expect(ctx.body).toEqual({ text: "hello" });
+    expect(ctx.body).toEqual("hello");
   });
 
   test("cors should set CORS headers and respond to OPTIONS with 204", () => {

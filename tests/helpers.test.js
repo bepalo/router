@@ -330,7 +330,7 @@ describe("Body Parsing Helpers", () => {
         body,
       });
 
-      const ctx = { body: {} };
+      const ctx = { };
       const middleware = parseBody();
 
       await middleware(req, ctx);
@@ -345,12 +345,12 @@ describe("Body Parsing Helpers", () => {
         body: JSON.stringify("string value"),
       });
 
-      const ctx = { body: {} };
+      const ctx = { };
       const middleware = parseBody();
 
       await middleware(req, ctx);
 
-      expect(ctx.body).toEqual({ value: "string value" });
+      expect(ctx.body).toEqual("string value");
     });
 
     test("should handle invalid JSON", async () => {
@@ -360,12 +360,12 @@ describe("Body Parsing Helpers", () => {
         body: "invalid json",
       });
 
-      const ctx = { body: {} };
+      const ctx = { };
       const middleware = parseBody();
 
       await middleware(req, ctx);
 
-      expect(ctx.body).toEqual({});
+      expect(ctx.body).toBeUndefined();
     });
 
     test("should handle GET request (no body)", async () => {
@@ -373,12 +373,12 @@ describe("Body Parsing Helpers", () => {
         method: "GET",
       });
 
-      const ctx = { body: {} };
+      const ctx = {};
       const middleware = parseBody();
 
       await middleware(req, ctx);
 
-      expect(ctx.body).toEqual({});
+      expect(ctx.body).toBeUndefined();
     });
   });
 });

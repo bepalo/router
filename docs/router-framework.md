@@ -1,4 +1,4 @@
-# 🏆 @bepalo/router - Framework Module Documentation
+# 🏆 @bepalo/router — Framework Module Documentation
 
 ## 📑 Table of Contents
 
@@ -20,16 +20,17 @@
 
 The `RouterFramework` extends the base `Router` class to provide **file-system based routing**. It automatically discovers and registers routes from your filesystem, mapping file paths to URL patterns.
 
-```typescript
+```ts
 import { RouterFramework } from "@bepalo/router";
 
 const app = new RouterFramework({
   rootPath: "./routes",
 });
 
-// Auto-discovers and registers all routes
-// The root path will be traversed and each node will be filtered and processed before being imported and registered into the router with the defined methods and handler types.
-// By default loaded file extensions are `.js`, `.ts`, `.jsx` and `.tsx`
+// Auto-discovers and registers all routes from the filesystem
+// The root path is traversed, each file is filtered and processed,
+// then imported and registered into the router with the defined handlers
+// By default, loaded file extensions are: .js, .ts, .jsx, .tsx
 await app.load();
 ```
 
@@ -59,7 +60,7 @@ routes/
 │       │       │   └── index.ts    → /api/v1/user/:userId/post
 │       |       └── [postId].ts     → /api/v1/user/:userId/post/:postId
 |
-└── [$$].ts                         → /** (all routes under / including /)
+└── [$$].ts                         → /.** (all routes under / including /)
 ```
 
 ---

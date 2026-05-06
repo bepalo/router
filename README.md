@@ -178,39 +178,55 @@ Deno.serve(
 
 ## 📚 Core Concepts
 
-### Handler Types & Execution Order
+### Handler Types & Pipeline Order
 
-The router processes requests in this specific order:
+The router processes requests in this order:
 
-    1. Hooks (router.hook()) - Pre-processing, responses are ignored
+1. **Hooks** (`router.hook()`): Pre-processing, responses are ignored.
+2. **Filters** (`router.filter()`): Request validation/authentication, can return a Response to short-circuit.
+3. **Handlers** (`router.handle()`): Main request processing, must return a Response.
+4. **Fallbacks** (`router.fallback()`): When no handler matches, e.g. for 404s.
+5. **Afters** (`router.after()`): Post-processing, responses are ignored.
+6. **Catchers** (`router.catch()`): Error handling, receives error in context.
 
-    2. Filters (router.filter()) - Request validation/authentication
+**Pipeline logic:**
 
-    3. Handlers (router.handle()) - Main request processing
+- Handlers in a pipeline are called in order. If a handler returns a `Response`, that response is sent and the pipeline stops.
+- If a handler returns `true`, the pipeline for that handler type stops, but no response is sent (useful for closest-match-only policies, e.g. rate limiters).
+- If a handler returns `false` or `undefined`, the next handler in the pipeline is called.
 
-    4. Fallbacks (router.fallback()) - When no handler matches
+### Router Context & TypeScript Extension
 
-    5. Afters (router.after()) - Post-processing, responses are ignored
-
-    6. Catchers (router.catch()) - Error handling
-
-### Router Context
-
-Each handler receives a context object and they can be extended as needed.
+Each handler receives a context object, which you can extend for your needs:
 
 ```ts
 interface RouterContext {
+  url: URL;
   params: Record<string, string>; // Route parameters
   headers: Headers; // Response headers
   response?: Response; // Final response
-  error?: Error; // Uncertain error
-  found: { ...: boolean }; // which handler types were found
+  error?: Error; // Error (if any)
+  found: {
+    hooks: boolean;
+    afters: boolean;
+    filters: boolean;
+    handlers: boolean;
+    fallbacks: boolean;
+    catchers: boolean;
+  };
 }
+
+// Example: Extending context for authentication
+type CTXAuth = { user?: { id: string } };
+const router = new Router<CTXAuth>();
+router.filter<CTXAuth>("GET /private", (req, ctx) => {
+  ctx.user = { id: "123" };
+});
 ```
 
 ### Example
 
-```js
+```ts
 import {
   Router,
   status,
@@ -226,18 +242,14 @@ import {
 import { z } from "zod";
 
 const router = new Router<CTXAddress>({
-  // Default headers can accept static headers or dynamic headers
-  //   as a function like this
   defaultHeaders: () => [
     ["X-Powered-By", "@bepalo/router"],
     ["Date", new Date().toUTCString()],
   ],
-  // Errors are caught by defualt but not logged
   defaultCatcher: (req, ctx) => {
     console.error("Error:", ctx.error);
     return json({ error: "Something went wrong" }, { status: 500 });
   },
-  // For crude optimizations
   enable: {
     hooks: false,
     afters: false,
@@ -245,30 +257,26 @@ const router = new Router<CTXAddress>({
     fallbacks: true,
     catchers: true,
   },
-  ///...
 });
 
 // Global rate-limit and CORS
 router.filter("ALL /.**", [
   limitRate({
-    key: (req, ctx) => ctx.address.address, // used to identify client
+    key: (req, ctx) => ctx.address.address,
     maxTokens: 30,
-    refillRate: 3, // 3 tokens every second
+    refillRate: 3,
     setXRateLimitHeaders: true,
   }),
-  cors({
-    origins: "*",
-    methods: ["GET"],
-  }),
+  cors({ origins: "*", methods: ["GET"] }),
 ]);
 
 // Rate limiting for API
-router.filter("CRUD /api/.**",[
+router.filter("CRUD /api/.**", [
   limitRate({
-    key: (req, ctx) => ctx.address.address, // used to identify client
+    key: (req, ctx) => ctx.address.address,
     maxTokens: 100,
-    refillInterval: 30_000, // every 30 seconds
-    refillRate: 50, // 50 tokens every refillInterval
+    refillInterval: 30_000,
+    refillRate: 50,
     setXRateLimitHeaders: true,
   }),
   cors({
@@ -280,7 +288,6 @@ router.filter("CRUD /api/.**",[
   }),
 ]);
 
-// Main route
 router.handle("GET /", () =>
   html("<h1>Welcome! Enjoy using @bepalo/router</h1>"),
 );
@@ -291,8 +298,6 @@ router.handle("GET /res/", () => text("/res/"));
 router.handle("GET /res", () => text("/res"));
 
 // Sample sub-route `/api/user`
-////////////////////////////////////////
-// eg. inside routes/api/user.ts
 const userRepo = new Map();
 const userAPI = new Router();
 let topId = 1000;
@@ -303,7 +308,7 @@ const postUserBodySchema = z.object({
 });
 
 userAPI.filter<CTXBody>("POST /", [
-  parseBody(),
+  parseBody({ once: true }),
   (req, { body }) => {
     const { success, error } = postUserBodySchema.safeParse(body);
     const errors = error?.issues ?? [];
@@ -323,7 +328,6 @@ userAPI.handle<CTXBody>("POST /", [
 userAPI.handle("GET /", () =>
   json({ users: Object.fromEntries(userRepo.entries()) }),
 );
-
 userAPI.handle("GET /:userId", (req, { params }) => {
   const { userId } = params;
   const user = userRepo.get(parseInt(userId));
@@ -331,16 +335,11 @@ userAPI.handle("GET /:userId", (req, { params }) => {
   return json({ user });
 });
 
-////////////////////////////////////////
-
 router.append("/api/user", userAPI);
 
-// fallback handling
 router.fallback("GET /api/.**", () =>
   json({ error: "Not found" }, { status: 404 }),
 );
-
-// Error handling
 router.catch("CRUD /api/.**", [
   (req, ctx) => {
     console.error("APIError:", ctx.error);
@@ -348,13 +347,11 @@ router.catch("CRUD /api/.**", [
   },
 ]);
 
-// Start server
 Bun.serve({
   port: 3000,
   async fetch(req, server) {
     const address = server.requestIP(req) as SocketAddress | null;
     if (!address) throw new Error("null client address");
-    /// best to log request and response here...
     return await router.respond(req, { address });
   },
 });
@@ -399,27 +396,24 @@ Deno.serve(
 );
 ```
 
-#### Nodejs
+#### Node.js
 
-```js
-// Serving using Node.js
+```ts
+import http from "http";
+
 http
   .createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host}`);
-
-    // Build fetch request
     const headers = new Headers();
     Object.entries(req.headers).forEach(
       ([k, v]) => v && headers.set(k, v.toString()),
     );
-
     const request = new Request(url, {
       method: req.method,
       headers,
       body: ["GET", "HEAD"].includes(req.method) ? undefined : req,
       duplex: "half",
     });
-
     const address = {
       family: req.socket.remoteFamily,
       address: req.socket.remoteAddress,
@@ -427,7 +421,6 @@ http
     };
     try {
       const response = await router.respond(request, { address });
-
       res.writeHead(
         response.status,
         response.statusText,
@@ -474,7 +467,7 @@ The router uses a radix tree (trie) data structure for route matching, providing
 | Runtime Agnostic                | ✅             | ❌      | ✅   | ⚠️      |
 | Router Composition              | ✅             | ✅      | ✅   | ✅      |
 | Structured Multi-Phase Pipeline | ✅             | ❌      | ❌   | ❌      |
-| Server                          | ❌             | ✅      | ⚠️   | ✅      |
+| Server                          | ⚠️             | ✅      | ⚠️   | ✅      |
 
 ## 📄 License
 

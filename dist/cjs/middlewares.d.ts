@@ -30,13 +30,9 @@ export type CTXCookie = {
 export declare const parseCookie: <XContext = {}>() => FreeHandler<XContext & CTXCookie>;
 /**
  * Parsed body object types.
- * @typedef {Object} ParsedBody
+ * @typedef {Object|Array<unknown>|string|null|undefined} ParsedBody
  */
-export type ParsedBody = {
-    value: string | number | boolean | null;
-} | {
-    values: unknown[];
-} | Record<string, unknown>;
+export type ParsedBody = Record<string, unknown> | Array<unknown> | string | number | boolean | null | undefined;
 /**
  * Context object containing parsed request body.
  * @typedef {Object} CTXBody

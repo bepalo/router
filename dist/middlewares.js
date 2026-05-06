@@ -79,7 +79,7 @@ const parseBody = (options) => {
                 ? parseInt(contentLengthHeader)
                 : undefined;
             if (contentLength === 0) {
-                ctx.body = {};
+                ctx.body = undefined;
                 return;
             }
             if (contentLength !== undefined && contentLength > maxSize) {
@@ -92,36 +92,18 @@ const parseBody = (options) => {
                     ctx.body = Object.fromEntries(body.entries());
                     break;
                 }
-                case "application/json": {
-                    const body = yield req.json();
-                    if (Array.isArray(body)) {
-                        ctx.body = { values: body };
-                    }
-                    else if (body === undefined) {
-                        ctx.body = {};
-                    }
-                    else if (body === null) {
-                        ctx.body = { value: null };
-                    }
-                    else if (typeof body === "object") {
-                        ctx.body = body;
-                    }
-                    else {
-                        ctx.body = { value: body };
-                    }
+                case "application/json":
+                    ctx.body = yield req.json();
                     break;
-                }
-                case "text/plain": {
-                    const text = yield req.text();
-                    ctx.body = { text };
+                case "text/plain":
+                    ctx.body = yield req.text();
                     break;
-                }
                 default:
-                    ctx.body = {};
+                    ctx.body = undefined;
                     break;
             }
         }
-        catch (error) {
+        catch (_e) {
             yield ((_d = _req.body) === null || _d === void 0 ? void 0 : _d.cancel().catch(() => { }));
             return (0, helpers_ts_1.status)(400, "Malformed Payload");
         }

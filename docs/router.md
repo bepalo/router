@@ -1,26 +1,22 @@
-# 🏆 @bepalo/router - Router Module Documentation
+# 🏆 @bepalo/router — Router Module Documentation
 
 ## 📑 Table of Contents
 
 - [Overview](#overview)
-  - [Design goals](#design-goals)
-  - [Key features](#key-features)
-  - [Pipeline (summary)](#pipeline-summary)
-  - [Path matching & priority](#path-matching--priority)
-  - [Performance & behavior](#performance--behavior)
-  - [Security & best practices](#security--best-practices)
+  - [Design Goals](#design-goals)
+  - [Key Features](#key-features)
+  - [Handler Pipeline](#handler-pipeline)
+  - [Path Matching & Priority](#path-matching--priority)
+  - [Performance & Behavior](#performance--behavior)
+  - [Security & Best Practices](#security--best-practices)
   - [Compatibility](#compatibility)
-  - [Handler Types](#handler-types)
-  - [Pipeline](#pipeline)
-  - [Path Patterns](#path-patterns)
-  - [Route Priority](#route-priority)
 - [API Reference](#api-reference)
   - [Router Class](#router-class)
     - [Constructor](#constructor)
     - [Configuration Options](#configuration-options)
     - [Handler Registration Methods](#handler-registration-methods)
     - [Handler Options](#handler-options)
-    - [Common Types](#common-types)
+    - [Context Types & Extending Context](#context-types--extending-context)
     - [Router Composition](#router-composition)
     - [Request Processing](#request-processing)
 - [Examples](#examples)
@@ -28,10 +24,10 @@
   - [Helper Functions](#helper-functions)
   - [Provided Middleware](#provided-middleware)
   - [Full Example](#full-example)
-  - [Serve with client address](#serve-with-client-address)
+  - [Serve with Client Address](#serve-with-client-address)
     - [Bun](#bun)
     - [Deno](#deno)
-    - [Nodejs](#nodejs)
+    - [Node.js](#nodejs)
 - [License](#license)
 
 ---
@@ -57,11 +53,22 @@
 - Configurable default headers, global catcher/fallback, and normalizeTrailingSlash support.
 - Works across Bun, Deno and Node with examples provided.
 
-### Pipeline (summary)
+### Handler Pipeline
 
-- Pipelines run in this general order: hooks → filters → handlers → fallbacks → catchers → afters.
-- A handler that returns a Response or true ends the current pipeline; false or undefined continues it.
-- Returning true stops the pipeline for that handler type without producing a Response (useful for closest-match-only policies, e.g. rate limiters).
+The router processes requests in this order:
+
+1. **Hooks** (`router.hook()`): Pre-processing, responses are ignored.
+2. **Filters** (`router.filter()`): Request validation/authentication, can return a Response to short-circuit.
+3. **Handlers** (`router.handle()`): Main request processing, must return a Response.
+4. **Fallbacks** (`router.fallback()`): When no handler matches, e.g. for 404s.
+5. **Afters** (`router.after()`): Post-processing, responses are ignored.
+6. **Catchers** (`router.catch()`): Error handling, receives error in context.
+
+**Pipeline logic:**
+
+- Handlers in a pipeline are called in order. If a handler returns a `Response`, that response is sent and the pipeline stops.
+- If a handler returns `true`, the pipeline for that handler type stops, but no response is sent (useful for closest-match-only policies, e.g. rate limiters).
+- If a handler returns `false` or `undefined`, the next handler in the pipeline is called.
 
 ### Path matching & priority
 
@@ -88,30 +95,42 @@
 
 ### Handler Types
 
-The router processes requests in this specific order:
-
-    1. Hooks (router.hook()) - Pre-processing, responses are ignored
-
-    2. Filters (router.filter()) - Request validation/authentication
-
-    3. Handlers (router.handle()) - Main request processing
-
-    4. Fallbacks (router.fallback()) - When no handler matches
-
-    5. Afters (router.after()) - Post-processing, responses are ignored
-
-    6. Catchers (router.catch()) - Error handling
+| Handler Type | Method              | Purpose                                   | Can End Pipeline? |
+| ------------ | ------------------- | ----------------------------------------- | ----------------- |
+| Hook         | `router.hook()`     | Pre-processing, cannot return Response    | No                |
+| Filter       | `router.filter()`   | Validation/auth, can return Response      | Yes               |
+| Handler      | `router.handle()`   | Main handler, must return Response        | Yes               |
+| Fallback     | `router.fallback()` | 404/No match handler                      | Yes               |
+| After        | `router.after()`    | Post-processing, cannot return Response   | No                |
+| Catcher      | `router.catch()`    | Error handling, receives error in context | Yes               |
 
 ---
 
-### Pipeline
+#### Example: Handler Pipeline
 
-There are multiple handler types and those handler types can have multple handlers that will be called intelligently. The logic is as follows.
+```ts
+import { Router, type CTXBody, parseBody, json, text } from "@bepalo/router";
 
-- In a pipeline of a certain handler type, the handlers are called from the first to the last and the pipleine will end and return when a `Response` or `true` value is returned from the current handler.
-- If a `false` value or nothing is returned from a handler then the chain will continue until the internal default handlers are reached.
-- If a `true` value is returned from a handler then the chain will stop for that handler type. This means the matched globs, i.e. `/.**,/api/** for GET /api/users` will not be called. _This is useful for eg. multiple rate-limiters: you would want to use only the closest matched, i.e. `/api/** for GET /api/users`_
-- When routing incoming requests exact matches will be looked up as well as glob,`.**,.*,**,*`, matches and based on the return value of the active handler the pipleline's flow will be controlled.
+type CTXPostUsers = CTXBody & { body: { email: string } };
+
+const router = new Router();
+
+// Filter pipeline
+router.filter<CTXPostUsers>("POST /api/users", [
+  parseBody({ once: true }), // Always use once:true for POST/PUT/PATCH
+  (req, ctx) => {
+    if (!ctx.body.email) return text("Email is required", { status: 400 });
+  },
+]);
+
+// Handler pipeline
+router.handle<CTXPostUsers>("POST /api/users", [
+  async (req, ctx) => {
+    // ...create user logic...
+    return json({ created: true }, { status: 201 });
+  },
+]);
+```
 
 ```js
 // for type safety
@@ -148,7 +167,7 @@ router.handle<CTXPostUsers>("POST /api/users", [
 
 ### Path Patterns
 
-```js
+```ts
 // Named parameters
 router.handle("GET /users/:id", handler); // Matches: /users/123
 
@@ -183,11 +202,9 @@ router.handle("*", handler); // GET|POST|PUT|etc /.**
 
 Routes are matched in this order of priority:
 
-    1. Exact path matches
-
-    2. Path parameters (:id) and Single segment wildcards (*, .*)
-
-    3. Multi-segment wildcards (**, .**)
+1. Exact path matches
+2. Path parameters (`:id`) and single segment wildcards (`*`, `.*`)
+3. Multi-segment wildcards (`**`, `.**`)
 
 ---
 
@@ -272,35 +289,40 @@ interface HandlerOptions {
 }
 ```
 
-### Router Context
+### Context Types & Extending Context
 
-Each handler receives a context object and they can be extended as needed.
+Each handler receives a context object, which you can extend for your needs:
 
 ```ts
 interface RouterContext {
+  url: URL;
   params: Record<string, string>; // Route parameters
   headers: Headers; // Response headers
   response?: Response; // Final response
-  error?: Error; // Uncertain error
+  error?: Error; // Error (if any)
   found: {
-    hooks: boolean; // Whether hooks were found
-    afters: boolean; // Whether afters were found
-    filters: boolean; // Whether filters were found
-    handlers: boolean; // Whether handlers were found
-    fallbacks: boolean; // Whether fallbacks were found
-    catchers: boolean; // Whether catchers were found
+    hooks: boolean;
+    afters: boolean;
+    filters: boolean;
+    handlers: boolean;
+    fallbacks: boolean;
+    catchers: boolean;
   };
 }
+
+// Example: Extending context for authentication
+type CTXAuth = { user?: { id: string } };
+const router = new Router<CTXAuth>();
+router.filter<CTXAuth>("GET /private", (req, ctx) => {
+  ctx.user = { id: "123" };
+});
 ```
 
 #### Common Types
 
 ```ts
 type HttpPath = `/${string}`;
-
-// 'GET /', 'ALL /.**', 'CRUD /api/**'
 type MethodPath = `${HttpMethod | "ALL" | "CRUD"} ${HttpPath}`;
-
 type HandlerType =
   | "filter"
   | "hook"
@@ -308,60 +330,46 @@ type HandlerType =
   | "fallback"
   | "catcher"
   | "after";
-
 type HandlerResponse =
   | Response
   | void
   | boolean
   | Promise<Response | void | boolean>;
-
 type BoundHandler<XContext = {}> = (
   this: Router<XContext>,
   req: Request,
   ctx: RouterContext<XContext>,
 ) => HandlerResponse;
-
 type FreeHandler<XContext = {}> = (
   req: Request,
   ctx: RouterContext<XContext>,
 ) => HandlerResponse;
-
 type Handler<XContext = {}> = FreeHandler<XContext> | BoundHandler<XContext>;
-
 type Pipeline<Context = {}> = Array<Handler<Context>>;
-
 type HeaderTuple = [string, string];
-
 interface SocketAddress {
   address: string;
   family: string;
   port: number;
 }
-
 type CTXError = { error: Error };
-
 type CTXAddress = { address: SocketAddress };
 ```
 
 #### Router Composition
 
 ```ts
-// Append routes from another router with a prefix. Does not merge router configurations
-router.append(
-  baseUrl: `/${string}`,
-  router: Router<Context>,
-  options?: HandlerOptions
-)
+// Append routes from another router with a prefix. Does NOT merge router configurations.
+mainRouter.append("/api", apiRouter);
 ```
+
+> **Note:** Appending does not merge configuration (e.g., default headers, catchers). Only routes are appended.
 
 #### Request Processing
 
 ```ts
 // Process a request
-router.respond(
-  req: Request,
-  context?: Partial<Context>
-): Promise<Response>
+router.respond(req: Request, context?: Partial<Context>): Promise<Response>
 ```
 
 ---
@@ -413,26 +421,26 @@ mainRouter.append("/api/v1", v1APIRouter);
 
 ```ts
 import {
-  Status, // Status enum
-  status, // HTTP status response
-  redirect, // Redirect response with location header set
-  forward, // forward to other path within the router.
-  text, // Plain text response
-  html, // HTML response
-  json, // JSON response
-  blob, // Blob response
-  octetStream, // Octet-stream response
-  formData, // FormData response
-  usp, // URLSearchParams response
-  send, // Smart response (auto-detects content type)
-  setCookie, // Set cookie header
-  clearCookie, // Clear cookie
+  Status,
+  status,
+  redirect,
+  forward,
+  text,
+  html,
+  json,
+  blob,
+  octetStream,
+  formData,
+  usp,
+  send,
+  setCookie,
+  clearCookie,
   type CTXCookie,
-  parseCookie, // Cookie parser
+  parseCookie,
   type CTXBody,
-  parseBody, // Body parser
+  parseBody,
   type CTXUpload,
-  parseUploadStreaming, // multi-part-form-data and file upload stream parser
+  parseUploadStreaming,
 } from "@bepalo/router";
 
 const router = new Router();
@@ -442,8 +450,7 @@ router.handle("GET /text", () => text("Hello World"));
 router.handle("GET /html", () => html("<h1>Title</h1>"));
 router.handle("GET /json", () => json({ data: "value" }));
 router.handle("GET /status", () => status(Status._204_NoContent, null)); // No Content
-router.handle("GET /intro.mp4", () => blob(Bun.file("./intro.mp4")));
-router.handle("GET /download", () => octetStream(Bun.file("./intro.mp4")));
+// ...
 
 router.handle("GET /new-location", () => html("GET new-location"));
 // router.handle("POST /new-location", () => html("POST new-location"));
@@ -593,17 +600,17 @@ router.handle<CTXUpload>("POST /upload", [
 
 ```ts
 import {
-  parseQuery, // Query parser
-  parseCookie, // Cookie parser
-  parseBody, // Body parser
-  parseUploadStreaming, // multi-part-form-data and file upload stream parser
-  cors, // CORS middleware
-  limitRate, // Rate limiting
-  authenticate, // Generic authentication middleware
-  authorize, // Generic authorization middleware
-  authBasic, // Basic authentication
-  authAPIKey, // API key authentication
-  authJWT, // JWT authentication
+  parseQuery,
+  parseCookie,
+  parseBody,
+  parseUploadStreaming,
+  cors,
+  limitRate,
+  authenticate,
+  authorize,
+  authBasic,
+  authAPIKey,
+  authJWT,
   type CTXQuery,
   type CTXCookie,
   type CTXBody,
@@ -614,7 +621,7 @@ import {
 
 ### Full Example
 
-```js
+```ts
 import {
   Router,
   status,
@@ -630,18 +637,14 @@ import {
 import { z } from "zod";
 
 const router = new Router<CTXAddress>({
-  // Default headers can accept static headers or dynamic headers
-  //   as a function like this
   defaultHeaders: () => [
     ["X-Powered-By", "@bepalo/router"],
     ["Date", new Date().toUTCString()],
   ],
-  // Errors are caught by defualt but not logged
   defaultCatcher: (req, ctx) => {
     console.error("Error:", ctx.error);
     return json({ error: "Something went wrong" }, { status: 500 });
   },
-  // For crude optimizations
   enable: {
     hooks: false,
     afters: false,
@@ -649,30 +652,26 @@ const router = new Router<CTXAddress>({
     fallbacks: true,
     catchers: true,
   },
-  ///...
 });
 
 // Global rate-limit and CORS
 router.filter("ALL /.**", [
   limitRate({
-    key: (req, ctx) => ctx.address.address, // used to identify client
+    key: (req, ctx) => ctx.address.address,
     maxTokens: 30,
-    refillRate: 3, // 3 tokens every second
+    refillRate: 3,
     setXRateLimitHeaders: true,
   }),
-  cors({
-    origins: "*",
-    methods: ["GET"],
-  }),
+  cors({ origins: "*", methods: ["GET"] }),
 ]);
 
 // Rate limiting for API
-router.filter("CRUD /api/.**",[
+router.filter("CRUD /api/.**", [
   limitRate({
-    key: (req, ctx) => ctx.address.address, // used to identify client
+    key: (req, ctx) => ctx.address.address,
     maxTokens: 100,
-    refillInterval: 30_000, // every 30 seconds
-    refillRate: 50, // 50 tokens every refillInterval
+    refillInterval: 30_000,
+    refillRate: 50,
     setXRateLimitHeaders: true,
   }),
   cors({
@@ -684,7 +683,6 @@ router.filter("CRUD /api/.**",[
   }),
 ]);
 
-// Main route
 router.handle("GET /", () =>
   html("<h1>Welcome! Enjoy using @bepalo/router</h1>"),
 );
@@ -695,8 +693,6 @@ router.handle("GET /res/", () => text("/res/"));
 router.handle("GET /res", () => text("/res"));
 
 // Sample sub-route `/api/user`
-////////////////////////////////////////
-// eg. inside routes/api/user.ts
 const userRepo = new Map();
 const userAPI = new Router();
 let topId = 1000;
@@ -707,7 +703,7 @@ const postUserBodySchema = z.object({
 });
 
 userAPI.filter<CTXBody>("POST /", [
-  parseBody(),
+  parseBody({ once: true }),
   (req, { body }) => {
     const { success, error } = postUserBodySchema.safeParse(body);
     const errors = error?.issues ?? [];
@@ -727,7 +723,6 @@ userAPI.handle<CTXBody>("POST /", [
 userAPI.handle("GET /", () =>
   json({ users: Object.fromEntries(userRepo.entries()) }),
 );
-
 userAPI.handle("GET /:userId", (req, { params }) => {
   const { userId } = params;
   const user = userRepo.get(parseInt(userId));
@@ -735,16 +730,11 @@ userAPI.handle("GET /:userId", (req, { params }) => {
   return json({ user });
 });
 
-////////////////////////////////////////
-
 router.append("/api/user", userAPI);
 
-// fallback handling
 router.fallback("GET /api/.**", () =>
   json({ error: "Not found" }, { status: 404 }),
 );
-
-// Error handling
 router.catch("CRUD /api/.**", [
   (req, ctx) => {
     console.error("APIError:", ctx.error);
@@ -752,13 +742,11 @@ router.catch("CRUD /api/.**", [
   },
 ]);
 
-// Start server
 Bun.serve({
   port: 3000,
   async fetch(req, server) {
     const address = server.requestIP(req) as SocketAddress | null;
     if (!address) throw new Error("null client address");
-    /// best to log request and response here...
     return await router.respond(req, { address });
   },
 });
@@ -770,8 +758,7 @@ console.log("Server listening on http://localhost:3000");
 
 #### Bun
 
-```js
-// Serving using Bun
+```ts
 Bun.serve({
   port: 3000,
   async fetch(req, server) {
@@ -784,8 +771,7 @@ console.log("Server running at http://localhost:3000");
 
 #### Deno
 
-```js
-// Serving using Deno
+```ts
 Deno.serve(
   {
     port: 3000,
@@ -799,31 +785,27 @@ Deno.serve(
     } as SocketAddress;
     return router.respond(req, { address });
   },
-  // router.respond.bind(router),
 );
 ```
 
-#### Nodejs
+#### Node.js
 
-```js
-// Serving using Node.js
+```ts
+import http from "http";
+
 http
   .createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host}`);
-
-    // Build fetch request
     const headers = new Headers();
     Object.entries(req.headers).forEach(
       ([k, v]) => v && headers.set(k, v.toString()),
     );
-
     const request = new Request(url, {
       method: req.method,
       headers,
       body: ["GET", "HEAD"].includes(req.method) ? undefined : req,
       duplex: "half",
     });
-
     const address = {
       family: req.socket.remoteFamily,
       address: req.socket.remoteAddress,
@@ -831,7 +813,6 @@ http
     };
     try {
       const response = await router.respond(request, { address });
-
       res.writeHead(
         response.status,
         response.statusText,
