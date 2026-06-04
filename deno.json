@@ -1,6 +1,6 @@
 {
   "name": "@bepalo/router",
-  "version": "2.14.39",
+  "version": "2.14.40",
   "exports": {
     ".": "./mod.ts",
     "./mod.ts": "./mod.ts"
